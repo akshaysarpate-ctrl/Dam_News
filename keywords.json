@@ -15,10 +15,10 @@
       "dam_terms": ["dam", "dams", "reservoir", "embankment", "bund", "barrage", "weir", "spillway", "tank bund", "check dam"],
       "failure_terms": ["breach*", "burst*", "collaps*", "fail*", "washed away", "gave way", "give way", "crack*", "leak*", "seepage", "overtopp*", "inundat*", "submerg*", "flooded", "land inundated", "crop damage", "sank", "sinking", "flood*", "overflow*", "water release*", "release* water", "gates opened", "gate* washed", "disaster*", "danger* mark", "flood alert"],
       "queries": [
-        "dam breach India", "dam failure India", "dam collapse", "dam burst",
-        "embankment breach dam", "dam overtopping", "spillway failure",
-        "dam cracks leakage", "land inundated dam", "villages inundated dam water released",
-        "reservoir breach India", "barrage gate washed away", "tank bund breach"
+        "dam breach India", "dam failure India", "dam collapse India", "dam burst India",
+        "embankment breach India dam", "dam overtopping India", "spillway failure India",
+        "dam cracks leakage India", "land inundated dam India", "villages inundated dam water released India",
+        "reservoir breach India", "barrage gate washed away India", "tank bund breach India"
       ]
     },
 
