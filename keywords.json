@@ -1,0 +1,156 @@
+{
+  "_readme": "Edit this file to add or change keywords. 'queries' are sent to Google News / YouTube. 'dam_terms' and 'failure_terms' are used to score each result. English terms ending in * match word prefixes (breach* matches breached). Indian-language terms are matched as substrings, so use word stems. Have a native speaker review each language.",
+
+  "negative_terms": [
+    "inaugurat*", "foundation stone", "bhoomi pujan", "tender*", "sanction*",
+    "budget", "mock drill", "water level", "storage", "tourist*",
+    "उद्घाटन", "शिलान्यास", "निविदा", "बजट", "पर्यटक", "भूमिपूजन", "लोकार्पण"
+  ],
+
+  "languages": {
+
+    "en": {
+      "name": "English", "native": "English",
+      "edition": {"hl": "en-IN", "gl": "IN", "ceid": "IN:en"},
+      "dam_terms": ["dam", "dams", "reservoir", "embankment", "bund", "barrage", "weir", "spillway", "tank bund", "check dam"],
+      "failure_terms": ["breach*", "burst*", "collaps*", "fail*", "washed away", "gave way", "give way", "crack*", "leak*", "seepage", "overtopp*", "inundat*", "submerg*", "flooded", "land inundated", "crop damage", "sank", "sinking", "flood*", "overflow*", "water release*", "release* water", "gates opened", "gate* washed", "disaster*", "danger* mark", "flood alert"],
+      "queries": [
+        "dam breach India", "dam failure India", "dam collapse", "dam burst",
+        "embankment breach dam", "dam overtopping", "spillway failure",
+        "dam cracks leakage", "land inundated dam", "villages inundated dam water released",
+        "reservoir breach India", "barrage gate washed away", "tank bund breach"
+      ]
+    },
+
+    "hi": {
+      "name": "Hindi", "native": "हिन्दी",
+      "edition": {"hl": "hi", "gl": "IN", "ceid": "IN:hi"},
+      "dam_terms": ["बांध", "बाँध", "डैम", "तटबंध", "बैराज", "जलाशय"],
+      "failure_terms": ["टूट", "फूट", "दरार", "रिसाव", "बह गया", "बह गई", "बह गए", "डूब", "जलमग्न", "जलभराव", "ओवरफ्लो", "पानी घुस"],
+      "queries": [
+        "बांध टूटा", "बांध फूटा", "बांध में दरार", "डैम टूटा", "तटबंध टूटा",
+        "बांध का पानी गांवों में घुसा", "बांध से पानी छोड़ा गांव डूबे",
+        "खेत जलमग्न बांध", "बांध रिसाव"
+      ]
+    },
+
+    "mr": {
+      "name": "Marathi", "native": "मराठी",
+      "edition": {"hl": "mr", "gl": "IN", "ceid": "IN:mr"},
+      "dam_terms": ["धरण", "बंधारा", "तलाव", "जलाशय", "पाझर"],
+      "failure_terms": ["फुट", "भगदाड", "गळती", "वाहून", "पाण्याखाली", "बुडाल", "तुटल", "भेगा", "ओसंडून"],
+      "queries": [
+        "धरण फुटले", "धरणाला भगदाड", "बंधारा फुटला", "तलाव फुटला",
+        "धरणाला गळती", "धरणाचे पाणी गावात शिरले", "शेती पाण्याखाली धरण", "धरणाला भेगा"
+      ]
+    },
+
+    "gu": {
+      "name": "Gujarati", "native": "ગુજરાતી",
+      "edition": {"hl": "gu", "gl": "IN", "ceid": "IN:gu"},
+      "dam_terms": ["ડેમ", "જળાશય", "ચેકડેમ", "તળાવ", "બેરેજ"],
+      "failure_terms": ["તૂટ", "ગાબડું", "ગાબડા", "ધોવાણ", "ધોવાઈ", "ફાટ", "ભંગાણ", "લીકેજ", "તિરાડ", "પાણી ફરી વળ્યા", "ડૂબ", "જળબંબાકાર"],
+      "queries": [
+        "ડેમ તૂટ્યો", "ડેમમાં ગાબડું", "ડેમમાં ભંગાણ", "ચેકડેમ તૂટ્યો",
+        "ડેમમાં તિરાડ", "ડેમનું પાણી ગામોમાં ફરી વળ્યા", "તળાવ તૂટ્યું"
+      ]
+    },
+
+    "bn": {
+      "name": "Bengali", "native": "বাংলা",
+      "edition": {"hl": "bn", "gl": "IN", "ceid": "IN:bn"},
+      "dam_terms": ["বাঁধ", "ড্যাম", "জলাধার", "ব্যারেজ"],
+      "failure_terms": ["ভেঙে", "ভেঙ্গে", "ভাঙন", "ধস", "ফাটল", "প্লাবিত", "তলিয়ে", "ভেসে গেল"],
+      "queries": [
+        "বাঁধ ভেঙে", "ড্যাম ভেঙে", "বাঁধে ফাটল",
+        "বাঁধ ভেঙে গ্রাম প্লাবিত", "ড্যাম থেকে জল ছাড়া গ্রাম প্লাবিত"
+      ]
+    },
+
+    "ta": {
+      "name": "Tamil", "native": "தமிழ்",
+      "edition": {"hl": "ta", "gl": "IN", "ceid": "IN:ta"},
+      "dam_terms": ["அணை", "தடுப்பணை", "அணைக்கட்டு", "ஏரிக்கரை", "ஏரி", "கண்மாய்"],
+      "failure_terms": ["உடைப்பு", "உடைந்", "விரிசல்", "கசிவு", "அடித்துச் செல்", "வெள்ளம்", "மூழ்க"],
+      "queries": [
+        "அணை உடைப்பு", "அணை உடைந்தது", "தடுப்பணை உடைப்பு", "ஏரி உடைப்பு",
+        "அணையில் விரிசல்", "அணையில் கசிவு", "அணை நீர் புகுந்து கிராமங்கள் மூழ்கின"
+      ]
+    },
+
+    "te": {
+      "name": "Telugu", "native": "తెలుగు",
+      "edition": {"hl": "te", "gl": "IN", "ceid": "IN:te"},
+      "dam_terms": ["ప్రాజెక్టు", "డ్యామ్", "ఆనకట్ట", "చెరువు", "బ్యారేజీ", "రిజర్వాయర్"],
+      "failure_terms": ["గండి", "తెగ", "కొట్టుకుపోయ", "పగుళ్లు", "లీకేజీ", "ముంపు", "మునిగ", "కూలి", "కుంగ"],
+      "queries": [
+        "ప్రాజెక్టుకు గండి", "చెరువు కట్ట తెగింది", "ఆనకట్ట తెగింది",
+        "డ్యామ్ గేటు కొట్టుకుపోయింది", "ప్రాజెక్టు పగుళ్లు", "చెరువుకు గండి", "బ్యారేజీ కుంగింది"
+      ]
+    },
+
+    "kn": {
+      "name": "Kannada", "native": "ಕನ್ನಡ",
+      "edition": {"hl": "kn", "gl": "IN", "ceid": "IN:kn"},
+      "dam_terms": ["ಅಣೆಕಟ್ಟು", "ಡ್ಯಾಂ", "ಜಲಾಶಯ", "ಕೆರೆ", "ಬ್ಯಾರೇಜ್"],
+      "failure_terms": ["ಒಡೆ", "ಕೊಚ್ಚಿ", "ಬಿರುಕು", "ಸೋರಿಕೆ", "ಜಲಾವೃತ", "ಮುಳುಗಡೆ", "ಕುಸಿ"],
+      "queries": [
+        "ಅಣೆಕಟ್ಟು ಒಡೆದು", "ಕೆರೆ ಏರಿ ಒಡೆದು", "ಡ್ಯಾಂ ಬಿರುಕು",
+        "ಜಲಾಶಯ ಗೇಟ್ ಕೊಚ್ಚಿ ಹೋಗಿ", "ಡ್ಯಾಂ ಸೋರಿಕೆ", "ಜಮೀನು ಜಲಾವೃತ ಡ್ಯಾಂ",
+        "ಕೆರೆ ಕಟ್ಟೆ ಒಡೆದು ಗ್ರಾಮ ಜಲಾವೃತ"
+      ]
+    },
+
+    "ml": {
+      "name": "Malayalam", "native": "മലയാളം",
+      "edition": {"hl": "ml", "gl": "IN", "ceid": "IN:ml"},
+      "dam_terms": ["അണക്കെട്ട", "ഡാം", "ബണ്ട", "തടയണ", "ബാരേജ്"],
+      "failure_terms": ["തകർ", "പൊട്ട", "വിള്ളൽ", "ചോർച്ച", "ഒലിച്ചുപോ", "മുങ്ങ", "വെള്ളപ്പൊക്ക", "കുത്തൊഴുക്ക"],
+      "queries": [
+        "അണക്കെട്ട് തകർന്നു", "ഡാം തകർന്നു", "അണക്കെട്ടിൽ വിള്ളൽ",
+        "തടയണ തകർന്നു", "ഡാം ചോർച്ച", "ബണ്ട് പൊട്ടി", "ഡാം തുറന്നു വെള്ളം കയറി"
+      ]
+    },
+
+    "or": {
+      "name": "Odia", "native": "ଓଡ଼ିଆ",
+      "edition": {"hl": "en-IN", "gl": "IN", "ceid": "IN:en"},
+      "dam_terms": ["ବନ୍ଧ", "ଡ୍ୟାମ", "ଜଳଭଣ୍ଡାର", "ବ୍ୟାରେଜ", "ଜଳାଶୟ"],
+      "failure_terms": ["ଭାଙ୍ଗି", "ଭାଙ୍ଗିଲା", "ଫାଟ", "ଜଳମଗ୍ନ", "ଭାସି", "ଖସି"],
+      "queries": [
+        "ବନ୍ଧ ଭାଙ୍ଗିଲା", "ବନ୍ଧ ଭାଙ୍ଗି ଗାଁ ଜଳମଗ୍ନ", "ଡ୍ୟାମ ଫାଟ", "ବ୍ୟାରେଜ ଭାଙ୍ଗିଲା"
+      ]
+    },
+
+    "pa": {
+      "name": "Punjabi", "native": "ਪੰਜਾਬੀ",
+      "edition": {"hl": "pa", "gl": "IN", "ceid": "IN:pa"},
+      "dam_terms": ["ਡੈਮ", "ਬੰਨ੍ਹ", "ਹੈੱਡਵਰਕਸ", "ਬੈਰਾਜ"],
+      "failure_terms": ["ਟੁੱਟ", "ਪਾੜ", "ਦਰਾਰ", "ਡੁੱਬ", "ਰੁੜ੍ਹ", "ਪਾਣੀ ਵੜ", "ਲੀਕ", "ਢਹਿ"],
+      "queries": [
+        "ਡੈਮ ਟੁੱਟਿਆ", "ਬੰਨ੍ਹ ਟੁੱਟਿਆ", "ਬੰਨ੍ਹ ਵਿੱਚ ਪਾੜ", "ਡੈਮ ਵਿੱਚ ਦਰਾਰ",
+        "ਬੰਨ੍ਹ ਟੁੱਟਣ ਨਾਲ ਪਿੰਡਾਂ ਵਿੱਚ ਪਾਣੀ ਵੜਿਆ"
+      ]
+    },
+
+    "ur": {
+      "name": "Urdu", "native": "اردو",
+      "edition": {"hl": "ur", "gl": "IN", "ceid": "IN:ur"},
+      "dam_terms": ["ڈیم", "بیراج", "پشتہ"],
+      "failure_terms": ["ٹوٹ", "شگاف", "دراڑ", "ڈوب", "بہہ", "سیلاب", "رساؤ"],
+      "queries": [
+        "ڈیم ٹوٹ گیا", "ڈیم میں شگاف", "بیراج ٹوٹ", "پشتہ ٹوٹ گیا"
+      ]
+    },
+
+    "as": {
+      "name": "Assamese", "native": "অসমীয়া",
+      "edition": {"hl": "en-IN", "gl": "IN", "ceid": "IN:en"},
+      "dam_terms": ["বান্ধ", "ডেম", "জলাধার", "বেৰেজ"],
+      "failure_terms": ["ভাঙি", "ফাটি", "বানপানী", "জলমগ্ন"],
+      "queries": [
+        "বান্ধ ভাঙিল", "ডেম ভাঙিল", "বান্ধ ভাঙি গাঁও জলমগ্ন"
+      ]
+    }
+  }
+}

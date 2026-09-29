@@ -1,0 +1,23 @@
+# Environment and secrets (Do NOT commit your API keys!)
+.env
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Logs
+collect.log
+*.log
+
+# SQLite journal / WAL temporary files
+dam_news.db-journal
+dam_news.db-shm
+dam_news.db-wal
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini

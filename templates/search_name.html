@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Search by name — Dam failure news watch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1><a href="{{ url_for('index') }}" style="text-decoration:none;color:inherit">Dam failure news watch</a></h1>
+      <div class="auto-schedule-badge" title="Automated daily collection configured for 7:00 AM IST">
+        <span class="pulse-indicator"></span>
+        <span class="sched-text"><strong>Auto-updates daily at 7:00 AM IST</strong> • Next run: {{ scheduler.next_run_human }}</span>
+      </div>
+    </div>
+    <p class="stamp">Deep newspaper search across all national & regional media</p>
+  </header>
+
+  {# ---------- period tabs (to get back to main views) ---------- #}
+  <nav class="periods" aria-label="Navigation">
+    <a href="{{ url_for('index') }}">← Back to timeline</a>
+    <a href="{{ url_for('search_name') }}" class="on" aria-current="true">🔍 Search by name</a>
+  </nav>
+
+  {# ---------- search box ---------- #}
+  <section class="range name-search-box" aria-labelledby="name-title">
+    <h2 id="name-title">Deep search by dam name, place, or event across all newspapers</h2>
+    <p class="hint">Enter any dam name (e.g. <em>Mullaperiyar, Hirakud, Machhu, Kalyani</em>), place, or keyword. Thoroughly searches all regional language newspapers (Hindi, Marathi, Gujarati, Telugu, Tamil, Kannada, Malayalam, Bengali, Odia, Punjabi) and national dailies for dam failure, breach, inundation, cracks, and flood discharge.</p>
+    <form method="get" action="{{ url_for('search_name') }}" class="name-form">
+      <input type="hidden" name="submitted" value="1">
+      <div class="fields">
+        <label class="name-input-label">
+          Dam / Place / Keyword
+          <input type="search" name="name" value="{{ name }}" placeholder="e.g. Mullaperiyar, Hirakud, Kalyani dam, Machhu, Morbi, breach…" autofocus required>
+        </label>
+        <label class="deep-search-label" title="Deep search across Google News editions for 12 Indian languages and national newspapers">
+          <input type="checkbox" name="deep" value="1" id="deep-check" {{ 'checked' if deep != '0' }}>
+          <span>🌐 Deep search internet (All Regional Newspapers)</span>
+        </label>
+        <button type="submit" class="primary">Search</button>
+      </div>
+    </form>
+  </section>
+
+  {% if deep_stats %}
+    <aside class="deep-banner" role="status">
+      <div class="deep-banner-icon">🌐</div>
+      <div class="deep-banner-content">
+        <h3>Deep Newspaper Search Completed!</h3>
+        <p>Thoroughly scanned <strong>{{ deep_stats.queries_total }}</strong> queries across all national and regional newspapers in 12 languages. Looked at <strong>{{ deep_stats.items_seen }}</strong> articles and added <strong>{{ deep_stats.items_added }}</strong> new stories for "{{ name }}" to the database in <strong>{{ deep_stats.time_seconds }}s</strong>.</p>
+      </div>
+    </aside>
+  {% elif name %}
+    <div class="deep-rescan-bar">
+      <a href="{{ url_for('search_name', name=name, deep=1) }}" class="btn-deep-rescan">
+        ⚡ Deep Search Internet for "{{ name }}" (All Regional Newspapers)
+      </a>
+      <span class="rescan-hint">Scans national dailies and regional newspapers across 12 languages for fresh news till date.</span>
+    </div>
+  {% endif %}
+
+  {% if name %}
+    {# ---------- timeline trend line and area graph ---------- #}
+    <section class="pulse" aria-labelledby="pulse-title">
+      <div class="pulse-header">
+        <h2 id="pulse-title"><strong>{{ total }}</strong> {{ 'story' if total == 1 else 'stories' }} matching "{{ name }}"{% if view_phrase %} {{ view_phrase }}{% endif %}</h2>
+        {% if trend and trend.peak > 0 %}
+          <span class="trend-peak-badge">Peak: <strong>{{ trend.peak }}</strong> {{ 'story' if trend.peak == 1 else 'stories' }}</span>
+        {% endif %}
+      </div>
+
+      {% if trend and trend.points %}
+        <div class="trend-chart-wrapper" role="img"
+             aria-label="News activity trend for {{ name }}. Peak volume: {{ trend.peak }} stories.">
+          <svg class="trend-chart" viewBox="0 0 800 110" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="trendGradName" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0e5a6e" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#0e5a6e" stop-opacity="0.02"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Guide grid lines -->
+            <line x1="24" y1="{{ trend.base_y }}" x2="776" y2="{{ trend.base_y }}" class="chart-grid base" />
+            <line x1="24" y1="{{ trend.mid_y }}" x2="776" y2="{{ trend.mid_y }}" class="chart-grid mid" />
+            <line x1="24" y1="{{ trend.top_y }}" x2="776" y2="{{ trend.top_y }}" class="chart-grid top" />
+
+            <!-- Smooth Area Fill -->
+            <path class="trend-area" d="{{ trend.area_path }}" fill="url(#trendGradName)" />
+
+            <!-- Trend Line -->
+            <path class="trend-line" d="{{ trend.line_path }}" />
+
+            <!-- Interactive Node Dots -->
+            {% for pt in trend.points %}
+              <g class="trend-node" data-count="{{ pt.count }}" data-label="{{ pt.label }}" tabindex="0">
+                <circle class="trend-hit" cx="{{ pt.x }}" cy="{{ pt.y }}" r="9" />
+                <circle class="trend-dot {{ 'has-count' if pt.count > 0 else 'zero' }}" cx="{{ pt.x }}" cy="{{ pt.y }}" r="{{ 3.5 if pt.count > 0 else 2 }}" />
+                <title>{{ pt.count }} {{ 'story' if pt.count == 1 else 'stories' }} ({{ pt.label }})</title>
+              </g>
+            {% endfor %}
+          </svg>
+        </div>
+
+        <div class="axis">
+          <span>{{ trend.start_label }}</span>
+          <span>Timeline trend curve • {% if unit == 'hour' %}Hourly timeline{% else %}Timeline view{% endif %}</span>
+          <span>{{ trend.end_label }}</span>
+        </div>
+      {% endif %}
+    </section>
+
+    <div class="layout">
+
+      <aside class="rail" aria-label="Filters">
+        <form method="get" action="{{ url_for('search_name') }}" class="find">
+          <input type="hidden" name="name" value="{{ name }}">
+
+          <label for="state">State</label>
+          <select id="state" name="state" onchange="this.form.submit()">
+            <option value="">All states</option>
+            {% for s in states %}
+              <option value="{{ s.state }}" {{ 'selected' if s.state == state_filter }}>{{ s.state }} ({{ s.c }})</option>
+            {% endfor %}
+          </select>
+
+          <button type="submit">Apply</button>
+        </form>
+
+        <h3>Type</h3>
+        <ul class="pick">
+          <li><a href="{{ url_for('search_name', name=name) }}" class="{{ 'on' if not kind }}">All <span>{{ kinds.get('article', 0) + kinds.get('video', 0) }}</span></a></li>
+          <li><a href="{{ url_for('search_name', name=name, kind='article') }}" class="{{ 'on' if kind == 'article' }}">Articles <span>{{ kinds.get('article', 0) }}</span></a></li>
+          <li><a href="{{ url_for('search_name', name=name, kind='video') }}" class="{{ 'on' if kind == 'video' }}">Videos <span>{{ kinds.get('video', 0) }}</span></a></li>
+        </ul>
+
+        <h3>Language</h3>
+        <ul class="pick">
+          <li><a href="{{ url_for('search_name', name=name) }}" class="{{ 'on' if not lang }}">All languages <span>{{ lang_total }}</span></a></li>
+          {% for l in langs %}
+            <li><a href="{{ url_for('search_name', name=name, lang=l.language) }}" class="{{ 'on' if lang == l.language }}">
+              <span class="ln"><span class="native">{{ l.language|lang_native }}</span>{% if l.language != 'en' %} <span class="eng">{{ l.language|lang_name }}</span>{% endif %}</span>
+              <span>{{ l.c }}</span></a></li>
+          {% endfor %}
+        </ul>
+      </aside>
+
+      <main>
+        {% if lang or state_filter or kind %}
+          <div class="active-filters-bar">
+            <span class="filter-intro">Active filters:</span>
+            {% if state_filter %}<span class="filter-pill">State: {{ state_filter }} <a href="{{ url_for('search_name', name=name, lang=lang, kind=kind) }}" class="pill-remove" title="Remove filter">×</a></span>{% endif %}
+            {% if lang %}<span class="filter-pill">Language: {{ lang|lang_name }} <a href="{{ url_for('search_name', name=name, state=state_filter, kind=kind) }}" class="pill-remove" title="Remove filter">×</a></span>{% endif %}
+            {% if kind %}<span class="filter-pill">Type: {{ kind|title }} <a href="{{ url_for('search_name', name=name, lang=lang, state=state_filter) }}" class="pill-remove" title="Remove filter">×</a></span>{% endif %}
+            <a href="{{ url_for('search_name', name=name) }}" class="clear-all-link">Clear all filters</a>
+          </div>
+        {% endif %}
+
+        {% if rows %}
+          <ul class="results">
+            {% for a in rows %}
+              <li class="item">
+                <div class="body">
+                  <a class="headline" lang="{{ a.language if a.language != 'und' else '' }}"
+                     href="{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id) }}"
+                     target="_blank" rel="noopener noreferrer">{{ a.title }}</a>
+                  <div class="meta">
+                    <span class="src">{{ a.source or 'Unknown source' }}</span>
+                    <time datetime="{{ a.published_at }}">{{ a.published_at|ist_date }}, {{ a.published_at|ago }}</time>
+                    <span class="chip">{{ a.language|lang_name }}</span>
+                    {% if a.kind == 'video' %}<span class="chip video">Video</span>{% endif %}
+                    {% if a.state %}<span class="chip place">{{ a.state }}{% if a.district %}, {{ a.district }}{% endif %}</span>{% endif %}
+                    {% if a.status == 'maybe' %}<span class="chip maybe">Possible match</span>{% endif %}
+                  </div>
+                  {% if a.dam_name %}<p class="dam">Structure: {{ a.dam_name }}</p>{% endif %}
+                  {% if a.snippet %}<p class="snippet">{{ a.snippet|truncate(220) }}</p>{% endif %}
+                  <div class="card-actions">
+                    <a class="btn-read-link"
+                       href="{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id) }}"
+                       target="_blank" rel="noopener noreferrer">Read full story ↗</a>
+                    <button type="button" class="btn-copy-link"
+                       onclick="copyLink('{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id, _external=True) }}', this)"
+                       title="Copy article URL">📋 Copy link</button>
+                  </div>
+                </div>
+                {% if a.thumbnail %}
+                  <a class="thumb"
+                     href="{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id) }}"
+                     target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
+                    <img src="{{ a.thumbnail }}" alt="" loading="lazy" width="120" height="68">
+                  </a>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+
+          {% if pages > 1 %}
+            <nav class="pager" aria-label="Pages">
+              {% if page > 1 %}<a href="{{ url_for('search_name', name=name, page=page-1, lang=lang, state=state_filter, kind=kind) }}">Newer</a>{% endif %}
+              <span>Page {{ page }} of {{ pages }}</span>
+              {% if page < pages %}<a href="{{ url_for('search_name', name=name, page=page+1, lang=lang, state=state_filter, kind=kind) }}">Older</a>{% endif %}
+            </nav>
+          {% endif %}
+        {% else %}
+          <div class="empty">
+            <p><strong>No stories found matching "{{ name }}".</strong></p>
+            <p>Would you like to perform a deep scan of the internet and all regional newspapers right now?</p>
+            <p><a href="{{ url_for('search_name', name=name, deep=1) }}" class="btn-deep-rescan" style="display:inline-block;margin-top:12px">⚡ Deep Search Internet for "{{ name }}" Now</a></p>
+          </div>
+        {% endif %}
+      </main>
+
+    </div>
+
+  {% else %}
+    {# No search yet — show suggestions #}
+    <div class="name-suggestions">
+      <h3>Quick deep search across all newspapers</h3>
+      <div class="suggestion-chips">
+        <a href="{{ url_for('search_name', name='Mullaperiyar', deep=1) }}">Mullaperiyar</a>
+        <a href="{{ url_for('search_name', name='Hirakud', deep=1) }}">Hirakud</a>
+        <a href="{{ url_for('search_name', name='Kalyani dam', deep=1) }}">Kalyani dam</a>
+        <a href="{{ url_for('search_name', name='Machhu dam', deep=1) }}">Machhu dam</a>
+        <a href="{{ url_for('search_name', name='Tehri', deep=1) }}">Tehri</a>
+        <a href="{{ url_for('search_name', name='Sardar Sarovar', deep=1) }}">Sardar Sarovar</a>
+        <a href="{{ url_for('search_name', name='dam breach', deep=1) }}">dam breach</a>
+        <a href="{{ url_for('search_name', name='dam failure', deep=1) }}">dam failure</a>
+        <a href="{{ url_for('search_name', name='inundation', deep=1) }}">inundation</a>
+        <a href="{{ url_for('search_name', name='dam collapse', deep=1) }}">dam collapse</a>
+        <a href="{{ url_for('search_name', name='Kerala', deep=1) }}">Kerala</a>
+        <a href="{{ url_for('search_name', name='Maharashtra', deep=1) }}">Maharashtra</a>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+  function copyLink(url, btn) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(function() { showToast('Link copied to clipboard!'); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Link copied to clipboard!');
+    }
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2200);
+  }
+
+  window.addEventListener('scroll', function() {
+    var btn = document.getElementById('backToTop');
+    if (btn) {
+      if (window.scrollY > 400) btn.classList.add('visible');
+      else btn.classList.remove('visible');
+    }
+  });
+</script>
+<div id="toast" class="toast-msg"></div>
+<a href="#" class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;" title="Back to top">↑ Top</a>
+</body>
+</html>
