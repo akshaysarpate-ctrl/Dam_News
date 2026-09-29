@@ -1,66 +1,36 @@
 @echo off
-setlocal enabledelayedexpansion
-title Push to GitHub Assistant
+set "PATH=C:\Program Files\Git\cmd;%PATH%"
+title Push Dam News to GitHub
 cd /d "%~dp0"
 
 echo ===================================================
-echo             Push to GitHub Assistant
+echo     Pushing Dam News to GitHub Repository
+echo     Target: https://github.com/akshaysarpate-ctrl/Dam_News.git
 echo ===================================================
 echo.
 
-:: 1. Set Git Identity if not already set
-git config --global user.name >nul 2>&1
-if errorlevel 1 (
-    echo Setting default Git identity...
-    git config --global user.name "Dam News User"
-    git config --global user.email "user@damnews.local"
-)
-git config --global core.autocrlf true >nul 2>&1
-
-:: 2. Stage and Commit
-echo Staging and committing files...
-git add .
-git commit -m "Deploy to Render" >nul 2>&1
-git branch -M main >nul 2>&1
-
-echo Files committed successfully!
-echo.
-echo ===================================================
-echo Go to https://github.com/new in your browser.
-echo Create a new repository and copy its URL.
-echo ===================================================
-echo.
-set /p REPO_URL="Paste your GitHub repository URL here: "
-
-if "%REPO_URL%"=="" (
-    echo No URL entered. Exiting.
-    pause
-    exit /b
-)
-
-:: Remove old origin if exists
-git remote remove origin >nul 2>&1
-
-:: Add new origin and push
-echo.
-echo Connecting to %REPO_URL% ...
-git remote add origin %REPO_URL%
+git branch -M main
+git remote set-url origin https://github.com/akshaysarpate-ctrl/Dam_News.git 2>nul || git remote add origin https://github.com/akshaysarpate-ctrl/Dam_News.git
 
 echo Uploading files to GitHub...
+echo (If a browser window or login popup appears, click "Sign in with your browser")
+echo.
+
 git push -u origin main
 
 if errorlevel 1 (
     echo.
-    echo ---------------------------------------------------
-    echo Push failed. Please check the URL and sign in if prompted.
-    echo ---------------------------------------------------
-) else (
-    echo.
     echo ===================================================
-    echo SUCCESS! Your code is now on GitHub!
-    echo You can now connect it on https://render.com
+    echo Push could not complete.
+    echo If it failed due to existing files, trying force push...
     echo ===================================================
+    git push -u origin main --force
 )
 
+echo.
+echo ===================================================
+echo ALL DONE! Your code is now live on GitHub:
+echo https://github.com/akshaysarpate-ctrl/Dam_News
+echo ===================================================
 echo.
 pause

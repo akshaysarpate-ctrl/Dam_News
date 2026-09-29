@@ -49,6 +49,21 @@ a { color: var(--water); }
   100% { box-shadow: 0 0 0 0 rgba(26,127,55,0); }
 }
 .top-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.badge-bg-update {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 99px;
+  background: var(--water-tint); border: 1px solid rgba(14,90,110,.25);
+  color: var(--water-deep); font-size: 13px; font-weight: 600;
+}
+.spin-icon {
+  display: inline-block;
+  animation: spinIcon 1.5s linear infinite;
+  font-size: 14px;
+}
+@keyframes spinIcon {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 .stamp { margin: 0; color: var(--muted); font-size: 13.5px; }
 .refresh-form { margin: 0; }
 .refresh-btn {

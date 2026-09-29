@@ -40,7 +40,7 @@ PERIODS = {
 }
 
 NOTICES = {
-    "busy": "A search is already running. Wait for it to finish, then try again.",
+    "busy": "A news collection is currently running in the background. Fresh articles will appear automatically.",
     "range": "Choose a From and a To date, written like 2026-06-01, with From on or before To.",
     "toolong": "Choose a range of one year or less. For longer periods, search one year at a time.",
     "nolangs": "Tick at least one language to search.",
@@ -367,13 +367,14 @@ def index():
     job = jobs.snapshot()
     job["this_range"] = (job["start"] == view["start"].isoformat()
                          and job["end"] == view["end"].isoformat())
+    is_my_search = request.args.get("searching") == "1"
     return render_template(
         "index.html", f=f, view=view, total=total, rows=rows,
         langs=langs, lang_total=sum(r["c"] for r in langs), states=states, kinds=kinds,
         bars=bars, peak=peak, trend=trend, pages=max(1, math.ceil(total / PAGE_SIZE)),
         last_run=last["finished_at"] if last else None,
         notice=f["error"] or NOTICES.get(request.args.get("notice", ""), ""),
-        job=job, today=today().isoformat(), has_youtube=bool(config.YOUTUBE_API_KEY),
+        job=job, is_my_search=is_my_search, today=today().isoformat(), has_youtube=bool(config.YOUTUBE_API_KEY),
         all_langs=[{"code": c, "name": v["name"], "native": v["native"]}
                    for c, v in config.LANGUAGES.items()])
 
@@ -394,7 +395,9 @@ def search_web():
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}
-    if not started:
+    if started:
+        args["searching"] = "1"
+    else:
         args["notice"] = "busy"
     return redirect(url_for("index", **args))
 
@@ -412,7 +415,9 @@ def refresh():
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}
-    if not started:
+    if started:
+        args["searching"] = "1"
+    else:
         args["notice"] = "busy"
     return redirect(url_for("index", **args))
 

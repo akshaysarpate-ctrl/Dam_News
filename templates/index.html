@@ -21,13 +21,18 @@
       </div>
     </div>
     <div class="top-actions">
+      {% if job.status == 'running' %}
+        <span class="badge-bg-update" title="A background news collection is running. You can continue browsing articles uninterrupted.">
+          <span class="spin-icon">&#x21bb;</span> Auto-updating in background
+        </span>
+      {% endif %}
       <p class="stamp">
         {% if last_run %}Last collected {{ last_run|ist_datetime }}{% else %}Nothing collected yet{% endif %}
       </p>
       <form method="post" action="{{ url_for('refresh') }}" class="refresh-form">
-        <button type="submit" class="refresh-btn" {{ 'disabled' if job.status == 'running' }}
-                title="Fetch the latest news from the last 3 days">
-          &#x21bb; Refresh news now
+        <button type="submit" class="refresh-btn" {{ 'disabled' if (is_my_search and job.status == 'running') }}
+                title="{{ 'A collection is currently in progress' if job.status == 'running' else 'Fetch the latest news from the last 3 days' }}">
+          &#x21bb; {{ 'Updating...' if (is_my_search and job.status == 'running') else 'Refresh news now' }}
         </button>
       </form>
     </div>
@@ -64,7 +69,7 @@
       <div class="fields">
         <label>From <input type="date" name="start" id="startDateInput" value="{{ view.start.isoformat() }}" max="{{ today }}" required></label>
         <label>To <input type="date" name="end" id="endDateInput" value="{{ view.end.isoformat() }}" max="{{ today }}" required></label>
-        <button type="submit" class="primary" {{ 'disabled' if job.status == 'running' }}>Search the internet</button>
+        <button type="submit" class="primary" {{ 'disabled' if (is_my_search and job.status == 'running') }}>Search the internet</button>
         <button type="submit" class="secondary" formmethod="get" formaction="{{ url_for('index') }}">Show saved results only</button>
       </div>
       <details class="langpick">
@@ -88,8 +93,8 @@
     </form>
   </section>
 
-  {# ---------- job progress ---------- #}
-  {% if job.status == 'running' %}
+  {# ---------- job progress (visible ONLY to the user who triggered search/refresh) ---------- #}
+  {% if is_my_search and job.status == 'running' %}
     <section class="job" id="job" role="status" aria-live="polite"
              data-url="{{ url_for('job_status') }}"
              data-live="{{ url_for('live_results') }}"
@@ -104,12 +109,12 @@
       <h2 id="live-title"><span id="live-count">0</span> new stories found so far</h2>
       <ul class="results" id="live-list"></ul>
     </section>
-  {% elif job.this_range and job.status == 'done' %}
+  {% elif is_my_search and job.this_range and job.status == 'done' %}
     <section class="job done" role="status">
       <p><strong>Search finished.</strong> Looked at {{ job.seen }} results and saved {{ job.added }} new {{ 'story' if job.added == 1 else 'stories' }} for this range.</p>
       {% for n in job.notes %}<p class="hint">{{ n }}</p>{% endfor %}
     </section>
-  {% elif job.this_range and job.status == 'error' %}
+  {% elif is_my_search and job.this_range and job.status == 'error' %}
     <section class="job failed" role="alert">
       <p><strong>{{ job.message }}</strong> {{ job.error }}</p>
     </section>
@@ -421,7 +426,16 @@
         document.getElementById('job-fill').style.width = j.percent + '%';
         document.getElementById('job-added').textContent = j.added;
         fetchLive();
-        if (j.status === 'running') { setTimeout(tick, 2500); } else { fetchLive(); setTimeout(function() { location.reload(); }, 2000); }
+        if (j.status === 'running') {
+          setTimeout(tick, 2500);
+        } else {
+          fetchLive();
+          setTimeout(function() {
+            var url = new URL(window.location.href);
+            url.searchParams.delete('searching');
+            window.location.href = url.toString();
+          }, 2000);
+        }
       }).catch(function () { setTimeout(tick, 5000); });
     }
     setTimeout(tick, 1500);
