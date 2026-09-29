@@ -531,6 +531,31 @@
     // Keyboard navigation (Arrow keys + Enter)
     input.addEventListener('keydown', function(e) {
       var items = dropdown.querySelectorAll('.nrsd-item');
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (items.length && dropdown.style.display !== 'none') {
+          var targetIndex = (selectedIndex >= 0 && selectedIndex < items.length) ? selectedIndex : 0;
+          items[targetIndex].click();
+        } else {
+          var val = input.value.trim();
+          if (val.length >= 2) {
+            fetch('/api/nrsd/suggest?q=' + encodeURIComponent(val))
+              .then(function(r) { return r.json(); })
+              .then(function(res) {
+                if (res && res.length) {
+                  openDamModal(res[0].id);
+                  dropdown.style.display = 'none';
+                } else {
+                  showToast('No registered dam found matching "' + val + '"');
+                }
+              })
+              .catch(function() {});
+          }
+        }
+        return;
+      }
+
       if (!items.length || dropdown.style.display === 'none') return;
 
       if (e.key === 'ArrowDown') {
@@ -541,11 +566,6 @@
         e.preventDefault();
         selectedIndex = (selectedIndex - 1 + items.length) % items.length;
         updateSelected(items);
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < items.length) {
-          items[selectedIndex].click();
-        }
       } else if (e.key === 'Escape') {
         dropdown.style.display = 'none';
       }
@@ -632,7 +652,10 @@
 
     function openDamModal(damId) {
       fetch('/api/nrsd/dam/' + damId)
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(function(data) {
           currentDamData = data;
           document.getElementById('nrsd-modal-title').textContent = data.name || 'Dam Salient Features';
