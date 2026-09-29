@@ -304,6 +304,33 @@
   </div>
 </div>
 
+<!-- NRSD Dam Salient Features Modal Popup -->
+<div id="nrsd-modal-backdrop" class="nrsd-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nrsd-modal-title">
+  <div class="nrsd-modal">
+    <div class="nrsd-modal-header">
+      <div>
+        <h2 id="nrsd-modal-title" class="nrsd-modal-title">Dam Name</h2>
+        <div class="nrsd-modal-badges">
+          <span id="nrsd-modal-pic" class="nrsd-modal-badge">PIC</span>
+          <span id="nrsd-modal-state" class="nrsd-modal-badge">State</span>
+          <span id="nrsd-modal-district" class="nrsd-modal-badge">District</span>
+        </div>
+      </div>
+      <button type="button" id="nrsd-modal-close-btn" class="nrsd-modal-close" aria-label="Close modal">✕</button>
+    </div>
+    <div id="nrsd-modal-body" class="nrsd-modal-body">
+      <!-- Injected via JavaScript -->
+    </div>
+    <div class="nrsd-modal-footer">
+      <div class="nrsd-footer-actions">
+        <a id="nrsd-modal-search-link" href="#" class="nrsd-btn-search">🔍 Search Dam Failure News</a>
+        <button type="button" id="nrsd-modal-copy-btn" class="nrsd-btn-copy">📋 Copy Salient Features</button>
+      </div>
+      <button type="button" id="nrsd-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // Select all / clear for the language checkboxes
   document.querySelectorAll('[data-pick]').forEach(function (btn) {
@@ -650,7 +677,31 @@
       }
     });
 
+    function closeModal() {
+      var modal = document.getElementById('nrsd-modal-backdrop');
+      if (modal) modal.classList.remove('open');
+    }
+
+    // Delegated close clicks
+    document.addEventListener('click', function(e) {
+      if (!e.target) return;
+      if (e.target.id === 'nrsd-modal-close-btn' || e.target.id === 'nrsd-modal-dismiss-btn' || e.target.id === 'nrsd-modal-backdrop') {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+
     function openDamModal(damId) {
+      var modal = document.getElementById('nrsd-modal-backdrop');
+      if (!modal) {
+        console.error('Modal element nrsd-modal-backdrop not found in DOM');
+        return;
+      }
       fetch('/api/nrsd/dam/' + damId)
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -658,10 +709,14 @@
         })
         .then(function(data) {
           currentDamData = data;
-          document.getElementById('nrsd-modal-title').textContent = data.name || 'Dam Salient Features';
-          document.getElementById('nrsd-modal-pic').textContent = data.pic ? ('National Code (PIC): ' + data.pic) : 'PIC: N/A';
-          document.getElementById('nrsd-modal-state').textContent = data.state || 'India';
-          document.getElementById('nrsd-modal-district').textContent = data.district ? ('District: ' + data.district) : '';
+          var titleEl = document.getElementById('nrsd-modal-title');
+          var picEl = document.getElementById('nrsd-modal-pic');
+          var stateEl = document.getElementById('nrsd-modal-state');
+          var distEl = document.getElementById('nrsd-modal-district');
+          if (titleEl) titleEl.textContent = data.name || 'Dam Salient Features';
+          if (picEl) picEl.textContent = data.pic ? ('National Code (PIC): ' + data.pic) : 'PIC: N/A';
+          if (stateEl) stateEl.textContent = data.state || 'India';
+          if (distEl) distEl.textContent = data.district ? ('District: ' + data.district) : '';
 
           // Map coordinates link
           var mapLinkHtml = '';
@@ -673,76 +728,64 @@
 
           // Direct search news link
           var searchLink = document.getElementById('nrsd-modal-search-link');
-          searchLink.href = '/search-name?name=' + encodeURIComponent(data.name);
-          searchLink.title = 'Search failure and distress news reports for ' + data.name;
+          if (searchLink) {
+            searchLink.href = '/search-name?name=' + encodeURIComponent(data.name);
+            searchLink.title = 'Search failure and distress news reports for ' + data.name;
+          }
 
           // Build 4 salient feature cards
           var body = document.getElementById('nrsd-modal-body');
-          body.innerHTML = 
-            '<div class="nrsd-card">' +
-            '  <h3 class="nrsd-card-heading">🏢 Administrative & Ownership</h3>' +
-            '  <div class="nrsd-grid">' +
-            '    <div class="nrsd-row"><span class="nrsd-k">State</span><span class="nrsd-v">' + esc(data.state || '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">District</span><span class="nrsd-v">' + esc(data.district || '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">SDSO Jurisdiction</span><span class="nrsd-v">' + esc(data.sdso_name || '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Dam Owner / Agency</span><span class="nrsd-v">' + esc(data.dam_owner || '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Year of Commission</span><span class="nrsd-v">' + esc(data.year_commission || '—') + '</span></div>' +
-            '  </div>' +
-            '</div>' +
+          if (body) {
+            body.innerHTML = 
+              '<div class="nrsd-card">' +
+              '  <h3 class="nrsd-card-heading">🏢 Administrative & Ownership</h3>' +
+              '  <div class="nrsd-grid">' +
+              '    <div class="nrsd-row"><span class="nrsd-k">State</span><span class="nrsd-v">' + esc(data.state || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">District</span><span class="nrsd-v">' + esc(data.district || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">SDSO Jurisdiction</span><span class="nrsd-v">' + esc(data.sdso_name || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Dam Owner / Agency</span><span class="nrsd-v">' + esc(data.dam_owner || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Year of Commission</span><span class="nrsd-v">' + esc(data.year_commission || '—') + '</span></div>' +
+              '  </div>' +
+              '</div>' +
 
-            '<div class="nrsd-card">' +
-            '  <h3 class="nrsd-card-heading">🌊 Hydrology & Location</h3>' +
-            '  <div class="nrsd-grid">' +
-            '    <div class="nrsd-row"><span class="nrsd-k">River</span><span class="nrsd-v">' + esc(data.river || '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">River Basin</span><span class="nrsd-v">' + esc(data.river_basin || '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Coordinates</span><span class="nrsd-v">' + esc(data.lat_long || '—') + mapLinkHtml + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Seismic Zone</span><span class="nrsd-v">' + (data.seismic_zone ? ('Zone ' + esc(data.seismic_zone)) : '—') + '</span></div>' +
-            '  </div>' +
-            '</div>' +
+              '<div class="nrsd-card">' +
+              '  <h3 class="nrsd-card-heading">🌊 Hydrology & Location</h3>' +
+              '  <div class="nrsd-grid">' +
+              '    <div class="nrsd-row"><span class="nrsd-k">River</span><span class="nrsd-v">' + esc(data.river || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">River Basin</span><span class="nrsd-v">' + esc(data.river_basin || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Coordinates</span><span class="nrsd-v">' + esc(data.lat_long || '—') + mapLinkHtml + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Seismic Zone</span><span class="nrsd-v">' + (data.seismic_zone ? ('Zone ' + esc(data.seismic_zone)) : '—') + '</span></div>' +
+              '  </div>' +
+              '</div>' +
 
-            '<div class="nrsd-card">' +
-            '  <h3 class="nrsd-card-heading">📐 Structural Dimensions</h3>' +
-            '  <div class="nrsd-grid">' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Type of Dam</span><span class="nrsd-v">' + esc(data.type_of_dam || '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Height above Lowest Foundation</span><span class="nrsd-v">' + (data.height_m ? (esc(data.height_m) + ' m') : '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Dam Crest Length</span><span class="nrsd-v">' + (data.length_m ? (esc(data.length_m) + ' m') : '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">National Register Sr. No.</span><span class="nrsd-v">#' + esc(data.sr_no || '—') + '</span></div>' +
-            '  </div>' +
-            '</div>' +
+              '<div class="nrsd-card">' +
+              '  <h3 class="nrsd-card-heading">📐 Structural Dimensions</h3>' +
+              '  <div class="nrsd-grid">' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Type of Dam</span><span class="nrsd-v">' + esc(data.type_of_dam || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Height above Lowest Foundation</span><span class="nrsd-v">' + (data.height_m ? (esc(data.height_m) + ' m') : '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Dam Crest Length</span><span class="nrsd-v">' + (data.length_m ? (esc(data.length_m) + ' m') : '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">National Register Sr. No.</span><span class="nrsd-v">#' + esc(data.sr_no || '—') + '</span></div>' +
+              '  </div>' +
+              '</div>' +
 
-            '<div class="nrsd-card">' +
-            '  <h3 class="nrsd-card-heading">💧 Storage & Spillway Capacity</h3>' +
-            '  <div class="nrsd-grid">' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Gross Storage Capacity</span><span class="nrsd-v">' + (data.gross_storage_mcm ? (esc(data.gross_storage_mcm) + ' MCM') : '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Effective Storage Capacity</span><span class="nrsd-v">' + (data.effective_storage_mcm ? (esc(data.effective_storage_mcm) + ' MCM') : '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Designed Spillway Capacity</span><span class="nrsd-v">' + (data.spillway_capacity_cumec ? (esc(data.spillway_capacity_cumec) + ' m³/s') : '—') + '</span></div>' +
-            '    <div class="nrsd-row"><span class="nrsd-k">Primary Purpose</span><span class="nrsd-v">' + esc(data.purpose || '—') + '</span></div>' +
-            '  </div>' +
-            '</div>';
+              '<div class="nrsd-card">' +
+              '  <h3 class="nrsd-card-heading">💧 Storage & Spillway Capacity</h3>' +
+              '  <div class="nrsd-grid">' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Gross Storage Capacity</span><span class="nrsd-v">' + (data.gross_storage_mcm ? (esc(data.gross_storage_mcm) + ' MCM') : '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Effective Storage Capacity</span><span class="nrsd-v">' + (data.effective_storage_mcm ? (esc(data.effective_storage_mcm) + ' MCM') : '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Designed Spillway Capacity</span><span class="nrsd-v">' + (data.spillway_capacity_cumec ? (esc(data.spillway_capacity_cumec) + ' m³/s') : '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Primary Purpose</span><span class="nrsd-v">' + esc(data.purpose || '—') + '</span></div>' +
+              '  </div>' +
+              '</div>';
+          }
 
-          modalBackdrop.classList.add('open');
+          modal.classList.add('open');
         })
         .catch(function(err) {
-          alert('Could not load details for this dam.');
+          console.error(err);
+          alert('Could not load details: ' + (err.message || err));
         });
     }
-
-    function closeModal() {
-      modalBackdrop.classList.remove('open');
-    }
-
-    if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
-    if (modalDismissBtn) modalDismissBtn.addEventListener('click', closeModal);
-
-    modalBackdrop.addEventListener('click', function(e) {
-      if (e.target === modalBackdrop) closeModal();
-    });
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) {
-        closeModal();
-      }
-    });
 
     if (modalCopyBtn) {
       modalCopyBtn.addEventListener('click', function() {
@@ -770,33 +813,6 @@
     }
   })();
 </script>
-
-<!-- NRSD Dam Salient Features Modal Popup -->
-<div id="nrsd-modal-backdrop" class="nrsd-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nrsd-modal-title">
-  <div class="nrsd-modal">
-    <div class="nrsd-modal-header">
-      <div>
-        <h2 id="nrsd-modal-title" class="nrsd-modal-title">Dam Name</h2>
-        <div class="nrsd-modal-badges">
-          <span id="nrsd-modal-pic" class="nrsd-modal-badge">PIC</span>
-          <span id="nrsd-modal-state" class="nrsd-modal-badge">State</span>
-          <span id="nrsd-modal-district" class="nrsd-modal-badge">District</span>
-        </div>
-      </div>
-      <button type="button" id="nrsd-modal-close-btn" class="nrsd-modal-close" aria-label="Close modal">✕</button>
-    </div>
-    <div id="nrsd-modal-body" class="nrsd-modal-body">
-      <!-- Injected via JavaScript -->
-    </div>
-    <div class="nrsd-modal-footer">
-      <div class="nrsd-footer-actions">
-        <a id="nrsd-modal-search-link" href="#" class="nrsd-btn-search">🔍 Search Dam Failure News</a>
-        <button type="button" id="nrsd-modal-copy-btn" class="nrsd-btn-copy">📋 Copy Salient Features</button>
-      </div>
-      <button type="button" id="nrsd-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
-    </div>
-  </div>
-</div>
 
 <div id="toast" class="toast-msg"></div>
 <a href="#" class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;" title="Back to top">↑ Top</a>
