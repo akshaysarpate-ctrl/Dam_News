@@ -35,7 +35,8 @@ def fetch(api_key: str, lang: str, query: str, published_after: datetime,
     except requests.RequestException as exc:
         log.warning("YouTube request failed: %s", str(exc)[:160])
         return []
-    if resp.status_code == 403 and "quota" in resp.text.lower():
+    if resp.status_code == 429 or (resp.status_code == 403 and "quota" in resp.text.lower()):
+        log.warning("YouTube quota exceeded (HTTP %s): %s", resp.status_code, resp.text[:140])
         raise QuotaExceeded()
     if resp.status_code != 200:
         log.warning("YouTube HTTP %s: %s", resp.status_code, resp.text[:200])

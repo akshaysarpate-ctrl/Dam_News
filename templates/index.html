@@ -22,17 +22,24 @@
     </div>
     <div class="top-actions">
       {% if job.status == 'running' %}
-        <span class="badge-bg-update" title="A background news collection is running. You can continue browsing articles uninterrupted.">
+        <span class="badge-bg-update" title="A background news collection is running across all languages. You can continue browsing articles uninterrupted.">
           <span class="spin-icon">&#x21bb;</span> Auto-updating in background
         </span>
       {% endif %}
-      <p class="stamp">
-        {% if last_run %}Last collected {{ last_run|ist_datetime }}{% else %}Nothing collected yet{% endif %}
+      <p class="stamp" id="last-collected-stamp">
+        {% if job.status == 'running' %}
+          <span class="collecting-pulse">&#x21bb; Refreshing live news feeds...</span>
+          {% if last_run %}<span class="sub-stamp">(Previous: {{ last_run|ist_datetime }})</span>{% endif %}
+        {% elif last_run %}
+          Last collected {{ last_run|ist_datetime }}
+        {% else %}
+          Nothing collected yet
+        {% endif %}
       </p>
       <form method="post" action="{{ url_for('refresh') }}" class="refresh-form">
-        <button type="submit" class="refresh-btn" {{ 'disabled' if (is_my_search and job.status == 'running') }}
-                title="{{ 'A collection is currently in progress' if job.status == 'running' else 'Fetch the latest news from the last 3 days' }}">
-          &#x21bb; {{ 'Updating...' if (is_my_search and job.status == 'running') else 'Refresh news now' }}
+        <button type="submit" class="refresh-btn" {{ 'disabled' if job.status == 'running' }}
+                title="{{ 'A collection is currently in progress across all languages' if job.status == 'running' else 'Fetch the latest news from the last 3 days across India' }}">
+          &#x21bb; {{ 'Updating...' if job.status == 'running' else 'Refresh news now' }}
         </button>
       </form>
     </div>

@@ -274,7 +274,9 @@ def ist_date(s):
 
 @app.template_filter("ist_datetime")
 def ist_datetime(s):
-    return _parse(s).astimezone(IST).strftime("%d %b %Y, %H:%M IST")
+    if not s:
+        return ""
+    return _parse(s).astimezone(IST).strftime("%d %b %Y, %I:%M %p IST")
 
 
 @app.template_filter("ago")

@@ -799,4 +799,26 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   text-decoration: none;
 }
 
+.collecting-pulse {
+  color: #0e5a6e;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  animation: pulse-op 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-op {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.sub-stamp {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 400;
+  margin-left: 0.35rem;
+}
+
+
 
