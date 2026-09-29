@@ -718,12 +718,21 @@
           if (stateEl) stateEl.textContent = data.state || 'India';
           if (distEl) distEl.textContent = data.district ? ('District: ' + data.district) : '';
 
-          // Map coordinates link
+          // Map coordinates link (Exact pinpoint via decimal lat/lng)
           var mapLinkHtml = '';
-          if (data.lat_long) {
+          if (data.lat_dec && data.lng_dec) {
+            var mapsUrl = 'https://www.google.com/maps?q=' + data.lat_dec + ',' + data.lng_dec;
+            var satUrl = 'https://www.google.com/maps/@' + data.lat_dec + ',' + data.lng_dec + ',16z/data=!3m1!1e3';
+            mapLinkHtml = '<div class="nrsd-maps-container">' +
+                          '  <div class="nrsd-maps-links">' +
+                          '    <a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" class="nrsd-btn-map pin" title="Open exact pin in Google Maps">📍 Open Pin in Maps ↗</a>' +
+                          '    <a href="' + satUrl + '" target="_blank" rel="noopener noreferrer" class="nrsd-btn-map sat" title="Open satellite terrain imagery">🛰️ Satellite View ↗</a>' +
+                          '  </div>' +
+                          '</div>';
+          } else if (data.lat_long) {
             var cleanCoords = data.lat_long.replace(/\n/g, ' ').trim();
-            var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(cleanCoords + ' dam ' + (data.state || ''));
-            mapLinkHtml = ' <a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" style="font-size:12px; margin-left:8px; color:var(--water); font-weight:600;">🗺️ Open in Google Maps ↗</a>';
+            var fallbackUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(cleanCoords);
+            mapLinkHtml = '<div class="nrsd-maps-container"><div class="nrsd-maps-links"><a href="' + fallbackUrl + '" target="_blank" rel="noopener noreferrer" class="nrsd-btn-map pin">📍 Open in Maps ↗</a></div></div>';
           }
 
           // Direct search news link
@@ -753,7 +762,8 @@
               '  <div class="nrsd-grid">' +
               '    <div class="nrsd-row"><span class="nrsd-k">River</span><span class="nrsd-v">' + esc(data.river || '—') + '</span></div>' +
               '    <div class="nrsd-row"><span class="nrsd-k">River Basin</span><span class="nrsd-v">' + esc(data.river_basin || '—') + '</span></div>' +
-              '    <div class="nrsd-row"><span class="nrsd-k">Coordinates</span><span class="nrsd-v">' + esc(data.lat_long || '—') + mapLinkHtml + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Coordinates</span><span class="nrsd-v">' + esc(data.lat_long || '—') + (data.lat_dec && data.lng_dec ? (' <small style="color:var(--muted); font-weight:normal;">(' + data.lat_dec + ', ' + data.lng_dec + ')</small>') : '') + '</span></div>' +
+              (mapLinkHtml || '') +
               '    <div class="nrsd-row"><span class="nrsd-k">Seismic Zone</span><span class="nrsd-v">' + (data.seismic_zone ? ('Zone ' + esc(data.seismic_zone)) : '—') + '</span></div>' +
               '  </div>' +
               '</div>' +
@@ -803,7 +813,8 @@
                    'Gross Storage: ' + (d.gross_storage_mcm || '') + ' MCM, Effective: ' + (d.effective_storage_mcm || '') + ' MCM\n' +
                    'Spillway Capacity: ' + (d.spillway_capacity_cumec || '') + ' m3/s\n' +
                    'Purpose: ' + (d.purpose || '') + '\n' +
-                   'Coordinates: ' + (d.lat_long || '');
+                   'Coordinates: ' + (d.lat_long || '') + (d.lat_dec && d.lng_dec ? (' (' + d.lat_dec + ', ' + d.lng_dec + ')') : '') + '\n' +
+                   'Google Maps: https://www.google.com/maps?q=' + (d.lat_dec || '') + ',' + (d.lng_dec || '');
         if (navigator.clipboard) {
           navigator.clipboard.writeText(text).then(function() {
             showToast('Salient features copied to clipboard!');

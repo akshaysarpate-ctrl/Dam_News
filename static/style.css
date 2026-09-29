@@ -756,4 +756,47 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 }
 .nrsd-btn-dismiss:hover { color: var(--ink); }
 
+/* Coordinates Map Buttons */
+.nrsd-maps-container {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+.nrsd-maps-links {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nrsd-btn-map {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all .15s ease;
+}
+.nrsd-btn-map.pin {
+  background: var(--water-tint);
+  color: var(--water-deep);
+  border: 1px solid rgba(14,90,110,.3);
+}
+.nrsd-btn-map.pin:hover {
+  background: var(--water);
+  color: #fff;
+  text-decoration: none;
+}
+.nrsd-btn-map.sat {
+  background: #edf2f7;
+  color: #2b4c65;
+  border: 1px solid #cbd5e1;
+}
+.nrsd-btn-map.sat:hover {
+  background: #1e293b;
+  color: #fff;
+  text-decoration: none;
+}
+
 
