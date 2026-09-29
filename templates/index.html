@@ -56,6 +56,7 @@
     {% endfor %}
     <a href="#custom-range-section" id="tab-custom-dates" class="{{ 'on' if view.custom }}" {% if view.custom %}aria-current="true"{% endif %} title="Select custom dates and search the internet">Custom dates</a>
     <a href="{{ url_for('search_name') }}" class="name-tab">&#x1F50D; Search by name</a>
+    <a href="#nrsd-section" id="tab-nrsd-nav" class="nrsd-nav-btn" title="Search 6,814 National Large Dams in NRSD">🏛️ Search NRSD Dams</a>
   </nav>
 
   {# ---------- search the internet for a date range (visible ONLY when Custom dates is selected) ---------- #}
@@ -173,6 +174,22 @@
   <div class="layout">
 
     <aside class="rail" aria-label="Filters">
+      <!-- NRSD Dam Directory Search Box -->
+      <section class="nrsd-sidebar-card" id="nrsd-section">
+        <div class="nrsd-card-header">
+          <span class="nrsd-badge-icon">🏛️</span>
+          <div>
+            <h3 class="nrsd-card-title">NRSD Dam Directory</h3>
+            <p class="nrsd-card-subtitle">Search 6,814 National Large Dams</p>
+          </div>
+        </div>
+        <div class="nrsd-search-field">
+          <input type="text" id="nrsd-search-input" placeholder="Type dam name (e.g. Tehri, Sardar...)" autocomplete="off" spellcheck="false" aria-label="Type dam name">
+          <span id="nrsd-clear-icon" class="nrsd-clear-icon" style="display:none;" title="Clear search">✕</span>
+        </div>
+        <div id="nrsd-dropdown" class="nrsd-dropdown" style="display:none;" role="listbox"></div>
+      </section>
+
       <form method="get" action="{{ url_for('index') }}" class="find">
         <input type="hidden" name="period" value="{{ f.period }}">
         {% if f.day %}<input type="hidden" name="day" value="{{ f.day }}">{% endif %}
@@ -470,8 +487,296 @@
       else btn.classList.remove('visible');
     }
   });
+
+  // ---- NRSD Dam Directory Search & Salient Features Modal ----
+  (function() {
+    var input = document.getElementById('nrsd-search-input');
+    var dropdown = document.getElementById('nrsd-dropdown');
+    var clearBtn = document.getElementById('nrsd-clear-icon');
+    var modalBackdrop = document.getElementById('nrsd-modal-backdrop');
+    var modalCloseBtn = document.getElementById('nrsd-modal-close-btn');
+    var modalDismissBtn = document.getElementById('nrsd-modal-dismiss-btn');
+    var modalCopyBtn = document.getElementById('nrsd-modal-copy-btn');
+    var debounceTimer = null;
+    var currentDamData = null;
+    var selectedIndex = -1;
+
+    if (!input || !dropdown) return;
+
+    // Smooth scroll from top nav button
+    var navBtn = document.getElementById('tab-nrsd-nav');
+    if (navBtn) {
+      navBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(function() { input.focus(); }, 350);
+      });
+    }
+
+    input.addEventListener('input', function() {
+      var val = this.value.trim();
+      clearBtn.style.display = val ? 'block' : 'none';
+      clearTimeout(debounceTimer);
+      selectedIndex = -1;
+      if (val.length < 2) {
+        dropdown.style.display = 'none';
+        dropdown.innerHTML = '';
+        return;
+      }
+      debounceTimer = setTimeout(function() {
+        fetchSuggestions(val);
+      }, 180);
+    });
+
+    // Keyboard navigation (Arrow keys + Enter)
+    input.addEventListener('keydown', function(e) {
+      var items = dropdown.querySelectorAll('.nrsd-item');
+      if (!items.length || dropdown.style.display === 'none') return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+        updateSelected(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+        updateSelected(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+          items[selectedIndex].click();
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    function updateSelected(items) {
+      items.forEach(function(el, idx) {
+        if (idx === selectedIndex) {
+          el.classList.add('selected');
+          el.scrollIntoView({ block: 'nearest' });
+        } else {
+          el.classList.remove('selected');
+        }
+      });
+    }
+
+    clearBtn.addEventListener('click', function() {
+      input.value = '';
+      clearBtn.style.display = 'none';
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      input.focus();
+    });
+
+    function esc(s) {
+      if (s === undefined || s === null) return '';
+      var d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+    }
+
+    function highlightMatch(text, query) {
+      if (!text) return '';
+      var idx = text.toLowerCase().indexOf(query.toLowerCase());
+      if (idx === -1) return esc(text);
+      var before = esc(text.substring(0, idx));
+      var match = esc(text.substring(idx, idx + query.length));
+      var after = esc(text.substring(idx + query.length));
+      return before + '<mark>' + match + '</mark>' + after;
+    }
+
+    function fetchSuggestions(query) {
+      fetch('/api/nrsd/suggest?q=' + encodeURIComponent(query))
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+          if (!items || !items.length) {
+            dropdown.innerHTML = '<div class="nrsd-item-empty">No registered dams found matching "<strong>' + esc(query) + '</strong>"</div>';
+            dropdown.style.display = 'block';
+            return;
+          }
+          var html = '';
+          items.forEach(function(item) {
+            html += '<div class="nrsd-item" data-id="' + item.id + '" role="option">';
+            html += '  <div class="nrsd-item-top">';
+            html += '    <span class="nrsd-item-name">' + highlightMatch(item.name, query) + '</span>';
+            if (item.pic) html += '    <span class="nrsd-item-pic">' + esc(item.pic) + '</span>';
+            html += '  </div>';
+            html += '  <div class="nrsd-item-meta">';
+            if (item.state) html += '<span>📍 ' + esc(item.state) + '</span>';
+            if (item.district) html += '<span>(' + esc(item.district) + ')</span>';
+            if (item.river) html += '<span>• River: ' + esc(item.river) + '</span>';
+            if (item.type_of_dam) html += '<span>• ' + esc(item.type_of_dam) + '</span>';
+            html += '  </div>';
+            html += '</div>';
+          });
+          dropdown.innerHTML = html;
+          dropdown.style.display = 'block';
+
+          dropdown.querySelectorAll('.nrsd-item').forEach(function(el) {
+            el.addEventListener('click', function() {
+              var damId = this.dataset.id;
+              openDamModal(damId);
+              dropdown.style.display = 'none';
+            });
+          });
+        })
+        .catch(function() {});
+    }
+
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!dropdown.contains(e.target) && e.target !== input && e.target !== clearBtn) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    function openDamModal(damId) {
+      fetch('/api/nrsd/dam/' + damId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          currentDamData = data;
+          document.getElementById('nrsd-modal-title').textContent = data.name || 'Dam Salient Features';
+          document.getElementById('nrsd-modal-pic').textContent = data.pic ? ('National Code (PIC): ' + data.pic) : 'PIC: N/A';
+          document.getElementById('nrsd-modal-state').textContent = data.state || 'India';
+          document.getElementById('nrsd-modal-district').textContent = data.district ? ('District: ' + data.district) : '';
+
+          // Map coordinates link
+          var mapLinkHtml = '';
+          if (data.lat_long) {
+            var cleanCoords = data.lat_long.replace(/\n/g, ' ').trim();
+            var mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(cleanCoords + ' dam ' + (data.state || ''));
+            mapLinkHtml = ' <a href="' + mapsUrl + '" target="_blank" rel="noopener noreferrer" style="font-size:12px; margin-left:8px; color:var(--water); font-weight:600;">🗺️ Open in Google Maps ↗</a>';
+          }
+
+          // Direct search news link
+          var searchLink = document.getElementById('nrsd-modal-search-link');
+          searchLink.href = '/search-name?name=' + encodeURIComponent(data.name);
+          searchLink.title = 'Search failure and distress news reports for ' + data.name;
+
+          // Build 4 salient feature cards
+          var body = document.getElementById('nrsd-modal-body');
+          body.innerHTML = 
+            '<div class="nrsd-card">' +
+            '  <h3 class="nrsd-card-heading">🏢 Administrative & Ownership</h3>' +
+            '  <div class="nrsd-grid">' +
+            '    <div class="nrsd-row"><span class="nrsd-k">State</span><span class="nrsd-v">' + esc(data.state || '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">District</span><span class="nrsd-v">' + esc(data.district || '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">SDSO Jurisdiction</span><span class="nrsd-v">' + esc(data.sdso_name || '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Dam Owner / Agency</span><span class="nrsd-v">' + esc(data.dam_owner || '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Year of Commission</span><span class="nrsd-v">' + esc(data.year_commission || '—') + '</span></div>' +
+            '  </div>' +
+            '</div>' +
+
+            '<div class="nrsd-card">' +
+            '  <h3 class="nrsd-card-heading">🌊 Hydrology & Location</h3>' +
+            '  <div class="nrsd-grid">' +
+            '    <div class="nrsd-row"><span class="nrsd-k">River</span><span class="nrsd-v">' + esc(data.river || '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">River Basin</span><span class="nrsd-v">' + esc(data.river_basin || '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Coordinates</span><span class="nrsd-v">' + esc(data.lat_long || '—') + mapLinkHtml + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Seismic Zone</span><span class="nrsd-v">' + (data.seismic_zone ? ('Zone ' + esc(data.seismic_zone)) : '—') + '</span></div>' +
+            '  </div>' +
+            '</div>' +
+
+            '<div class="nrsd-card">' +
+            '  <h3 class="nrsd-card-heading">📐 Structural Dimensions</h3>' +
+            '  <div class="nrsd-grid">' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Type of Dam</span><span class="nrsd-v">' + esc(data.type_of_dam || '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Height above Lowest Foundation</span><span class="nrsd-v">' + (data.height_m ? (esc(data.height_m) + ' m') : '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Dam Crest Length</span><span class="nrsd-v">' + (data.length_m ? (esc(data.length_m) + ' m') : '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">National Register Sr. No.</span><span class="nrsd-v">#' + esc(data.sr_no || '—') + '</span></div>' +
+            '  </div>' +
+            '</div>' +
+
+            '<div class="nrsd-card">' +
+            '  <h3 class="nrsd-card-heading">💧 Storage & Spillway Capacity</h3>' +
+            '  <div class="nrsd-grid">' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Gross Storage Capacity</span><span class="nrsd-v">' + (data.gross_storage_mcm ? (esc(data.gross_storage_mcm) + ' MCM') : '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Effective Storage Capacity</span><span class="nrsd-v">' + (data.effective_storage_mcm ? (esc(data.effective_storage_mcm) + ' MCM') : '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Designed Spillway Capacity</span><span class="nrsd-v">' + (data.spillway_capacity_cumec ? (esc(data.spillway_capacity_cumec) + ' m³/s') : '—') + '</span></div>' +
+            '    <div class="nrsd-row"><span class="nrsd-k">Primary Purpose</span><span class="nrsd-v">' + esc(data.purpose || '—') + '</span></div>' +
+            '  </div>' +
+            '</div>';
+
+          modalBackdrop.classList.add('open');
+        })
+        .catch(function(err) {
+          alert('Could not load details for this dam.');
+        });
+    }
+
+    function closeModal() {
+      modalBackdrop.classList.remove('open');
+    }
+
+    if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
+    if (modalDismissBtn) modalDismissBtn.addEventListener('click', closeModal);
+
+    modalBackdrop.addEventListener('click', function(e) {
+      if (e.target === modalBackdrop) closeModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) {
+        closeModal();
+      }
+    });
+
+    if (modalCopyBtn) {
+      modalCopyBtn.addEventListener('click', function() {
+        if (!currentDamData) return;
+        var d = currentDamData;
+        var text = 'Salient Features: ' + (d.name || '') + '\n' +
+                   'PIC: ' + (d.pic || '') + '\n' +
+                   'State: ' + (d.state || '') + ', District: ' + (d.district || '') + '\n' +
+                   'SDSO: ' + (d.sdso_name || '') + '\n' +
+                   'Owner: ' + (d.dam_owner || '') + '\n' +
+                   'Year: ' + (d.year_commission || '') + '\n' +
+                   'Type: ' + (d.type_of_dam || '') + '\n' +
+                   'River: ' + (d.river || '') + ' (' + (d.river_basin || '') + ' Basin)\n' +
+                   'Height: ' + (d.height_m || '') + ' m, Length: ' + (d.length_m || '') + ' m\n' +
+                   'Gross Storage: ' + (d.gross_storage_mcm || '') + ' MCM, Effective: ' + (d.effective_storage_mcm || '') + ' MCM\n' +
+                   'Spillway Capacity: ' + (d.spillway_capacity_cumec || '') + ' m3/s\n' +
+                   'Purpose: ' + (d.purpose || '') + '\n' +
+                   'Coordinates: ' + (d.lat_long || '');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(function() {
+            showToast('Salient features copied to clipboard!');
+          });
+        }
+      });
+    }
+  })();
 </script>
+
+<!-- NRSD Dam Salient Features Modal Popup -->
+<div id="nrsd-modal-backdrop" class="nrsd-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nrsd-modal-title">
+  <div class="nrsd-modal">
+    <div class="nrsd-modal-header">
+      <div>
+        <h2 id="nrsd-modal-title" class="nrsd-modal-title">Dam Name</h2>
+        <div class="nrsd-modal-badges">
+          <span id="nrsd-modal-pic" class="nrsd-modal-badge">PIC</span>
+          <span id="nrsd-modal-state" class="nrsd-modal-badge">State</span>
+          <span id="nrsd-modal-district" class="nrsd-modal-badge">District</span>
+        </div>
+      </div>
+      <button type="button" id="nrsd-modal-close-btn" class="nrsd-modal-close" aria-label="Close modal">✕</button>
+    </div>
+    <div id="nrsd-modal-body" class="nrsd-modal-body">
+      <!-- Injected via JavaScript -->
+    </div>
+    <div class="nrsd-modal-footer">
+      <div class="nrsd-footer-actions">
+        <a id="nrsd-modal-search-link" href="#" class="nrsd-btn-search">🔍 Search Dam Failure News</a>
+        <button type="button" id="nrsd-modal-copy-btn" class="nrsd-btn-copy">📋 Copy Salient Features</button>
+      </div>
+      <button type="button" id="nrsd-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast-msg"></div>
 <a href="#" class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;" title="Back to top">↑ Top</a>
 </body>
 </html>
+

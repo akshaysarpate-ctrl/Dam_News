@@ -533,6 +533,50 @@ def job_status():
     return jsonify(jobs.snapshot())
 
 
+@app.get("/api/nrsd/suggest")
+def nrsd_suggest():
+    """Return matching dams starting with or containing query term for live typeahead."""
+    q = request.args.get("q", "").strip()
+    if not q or len(q) < 2:
+        return jsonify([])
+    conn = db.connect()
+    try:
+        # Search starting with query first, then containing query
+        query = """
+            SELECT id, pic, name, state, district, river, type_of_dam
+            FROM (
+                SELECT id, pic, name, state, district, river, type_of_dam, 1 as priority
+                FROM nrsd_dams
+                WHERE name LIKE ? || '%'
+                UNION
+                SELECT id, pic, name, state, district, river, type_of_dam, 2 as priority
+                FROM nrsd_dams
+                WHERE name LIKE '%' || ? || '%' AND NOT (name LIKE ? || '%')
+            )
+            ORDER BY priority ASC, name ASC
+            LIMIT 25
+        """
+        rows = conn.execute(query, (q, q, q)).fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.get("/api/nrsd/dam/<int:dam_id>")
+def nrsd_dam_details(dam_id: int):
+    """Return complete salient features for a specific dam."""
+    conn = db.connect()
+    try:
+        row = conn.execute("SELECT * FROM nrsd_dams WHERE id = ?", (dam_id,)).fetchone()
+        if not row:
+            abort(404)
+        return jsonify(dict(row))
+    finally:
+        conn.close()
+
+
 @app.get("/live-results")
 def live_results():
     """Return newly found articles since the last poll. Called by JS during a running search."""
