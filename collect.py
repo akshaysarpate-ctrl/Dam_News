@@ -43,7 +43,7 @@ def store(conn, items, stats):
     valid = []
     for item in items:
         stats["seen"] += 1
-        verdict = filters.evaluate(item["language"], item["title"], item.get("snippet", ""))
+        verdict = filters.evaluate(item["language"], item["title"], item.get("snippet", ""), item.get("source", ""))
         if not verdict:
             continue
         item["score"], item["status"], item["state"] = verdict

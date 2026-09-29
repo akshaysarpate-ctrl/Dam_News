@@ -76,6 +76,52 @@ INDIAN_RIVERS = [
 ]
 _INDIAN_RIVERS_RE = re.compile(r"\b(" + "|".join(re.escape(r) for r in INDIAN_RIVERS) + r")\b", re.IGNORECASE)
 
+# AI & Synthetic / Simulation / Fictional Content Patterns
+AI_PATTERNS = [
+    r"\bai\b",
+    r"\bai[- ]generated\b",
+    r"\bai[- ]animation\b",
+    r"\bai\s*(pics?|photos?|images?|तस्वीर|तस्वीरें|चित्र|video|वीडियो)",
+    r"\bartificial intelligence\b",
+    r"आर्टिफिशियल इंटेलिजेंस",
+    r"\bcgi\b",
+    r"\bsimulation\b",
+    r"\bsimulator\b",
+    r"\bdeepfake\b",
+    r"\bmidjourney\b",
+    r"\bdall[- ]e\b",
+    r"\bsora\b",
+    r"\brunway\b",
+    r"\bchatgpt\b",
+    r"\bopenai\b",
+    r"\bsynthetic\b",
+    r"\bunreal engine\b",
+    r"\bblender\b",
+    r"\b3d animation\b",
+    r"\bhypothetical\b",
+    r"\bwhat if\b",
+    r"क्या होगा अगर",
+    r"काल्पनिक",
+    r"\bfictional?\b",
+    r"\bcartoon\b",
+    r"\btoon\b",
+    r"कहानी",
+    r"\bkahani\b",
+]
+_AI_SYNTHETIC_RE = re.compile("|".join(AI_PATTERNS), re.IGNORECASE)
+
+AI_SOURCE_PATTERNS = [
+    r"\bai\b",
+    r"\bartificial intelligence\b",
+    r"\bcgi\b",
+    r"\btoon\b",
+    r"\bcartoon\b",
+    r"\banimation\b",
+    r"\bsimulator\b",
+    r"\bsimulation\b",
+]
+_AI_SOURCE_RE = re.compile("|".join(AI_SOURCE_PATTERNS), re.IGNORECASE)
+
 
 def nfkc(text: str) -> str:
     return unicodedata.normalize("NFKC", text or "").lower()
@@ -122,12 +168,18 @@ def detect_state(text: str) -> str:
     return next(s for s in INDIAN_STATES if s.lower() == found)
 
 
-def evaluate(lang: str, title: str, snippet: str = ""):
+def evaluate(lang: str, title: str, snippet: str = "", source: str = ""):
     """Return (score, status, state) or None if the item should be dropped.
 
-    Strict India Policy: only Indian dams, Indian news, and India-related dam news.
+    Strict Policies:
+    - 0% AI content: No AI-generated videos, articles, CGI, simulations, or fiction.
+    - India only: Only authentic Indian dams and India-related dam news.
     """
     text = nfkc(f"{title} {snippet}")
+
+    # 0. Reject AI-generated, synthetic, CGI, simulation, and cartoon content immediately
+    if _AI_SYNTHETIC_RE.search(text) or (source and _AI_SOURCE_RE.search(source)):
+        return None
 
     # 1. Reject explicit foreign dams immediately
     if _FOREIGN_DAM_RE.search(text):

@@ -161,11 +161,13 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
         text = f"{title} {snippet}".lower()
 
         # Check if the name or dam terms match
-        verdict = filters.evaluate(item["language"], title, snippet)
+        verdict = filters.evaluate(item["language"], title, snippet, item.get("source", ""))
         
         if verdict:
             item["score"], item["status"], item["state"] = verdict
         elif base_lower in text and any(w in text for w in WATER_TERMS):
+            if filters._AI_SYNTHETIC_RE.search(text) or (item.get("source") and filters._AI_SOURCE_RE.search(item["source"])):
+                continue
             state = filters.detect_state(f"{title} {snippet}")
             item["score"] = 60
             item["status"] = "relevant"

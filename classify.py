@@ -23,8 +23,9 @@ relevant = true only if the item reports an actual failure, breach, collapse, ga
 overtopping, serious leakage or cracks of a dam, barrage, reservoir or tank bund, OR
 inundation of land/villages caused by such a failure or an uncontrolled release.
 relevant = false for: inaugurations, plans, tenders, mock drills, routine water-level or
-release notices, tourism, opinion pieces without an incident, and failures of river
-flood embankments (use structure "river_embankment")."""
+release notices, tourism, opinion pieces without an incident, failures of river
+flood embankments (use structure "river_embankment"), and any AI-generated videos,
+synthetic images, CGI simulations, cartoons, or hypothetical "what if" scenarios."""
 
 
 def parse_reply(text: str):
