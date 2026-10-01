@@ -35,11 +35,49 @@ def get(url, params=None, retries=3, timeout=30, sleep=(1.0, 2.0)):
     return None
 
 
+def resolve_via_bing_news(title: str, source: str = "") -> str:
+    """Find the exact direct publisher article URL using Bing News."""
+    if not title:
+        return ""
+    import urllib.parse
+    from selectolax.parser import HTMLParser
+
+    q = f'"{title}"'
+    if source and source.lower() not in ("unknown source", "google news"):
+        q += f" {source}"
+    url = f"https://www.bing.com/news/search?q={urllib.parse.quote(q)}"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=4)
+        if r.status_code == 200:
+            tree = HTMLParser(r.text)
+            for a in tree.css('a.title, div.news-card a, a[href^="http"]'):
+                href = a.attributes.get("href", "")
+                if href.startswith("http") and not any(d in href for d in ("bing.com", "msn.com", "microsoft.com", "google.com")):
+                    return href
+    except Exception:
+        pass
+
+    # Try without quotes if exact quote didn't match
+    q2 = f"{title} {source}".strip()
+    url2 = f"https://www.bing.com/news/search?q={urllib.parse.quote(q2)}"
+    try:
+        r = requests.get(url2, headers=HEADERS, timeout=4)
+        if r.status_code == 200:
+            tree = HTMLParser(r.text)
+            for a in tree.css('a.title, div.news-card a, a[href^="http"]'):
+                href = a.attributes.get("href", "")
+                if href.startswith("http") and not any(d in href for d in ("bing.com", "msn.com", "microsoft.com", "google.com")):
+                    return href
+    except Exception:
+        pass
+    return ""
+
+
 def resolve_news_url(url: str, title: str = "", source: str = "") -> str:
     """Resolve an encoded Google News URL to the direct publisher newspaper URL.
 
     Guarantees opening the actual news article directly on the newspaper's
-    website without any intermediate Google Redirect Notice or search page.
+    website without any intermediate search screens.
     """
     if not url:
         return ""
@@ -49,7 +87,7 @@ def resolve_news_url(url: str, title: str = "", source: str = "") -> str:
     # 1. Primary: Use GoogleDecoder (batchexecute RPC over HTTP/2)
     try:
         from googlenewsdecoder import GoogleDecoder
-        with GoogleDecoder(timeout=6.0) as gd:
+        with GoogleDecoder(timeout=7.0) as gd:
             res = gd.decode_google_news_url(url)
             if res.get("success") and res.get("decoded_url"):
                 target = res["decoded_url"]
@@ -58,26 +96,11 @@ def resolve_news_url(url: str, title: str = "", source: str = "") -> str:
     except Exception as exc:
         log.warning("GoogleDecoder error for %s: %s", url[:50], exc)
 
-    # 2. Secondary fallback: DuckDuckGo search for exact title & source
+    # 2. Secondary fallback: Bing News direct publisher link
     if title:
-        try:
-            import urllib.parse
-            q = f"{title} {source}".strip()
-            r = requests.post("https://html.duckduckgo.com/html/", data={"q": q},
-                              headers=HEADERS, timeout=3.5)
-            if r.status_code == 200:
-                from selectolax.parser import HTMLParser
-                tree = HTMLParser(r.text)
-                for a in tree.css("a.result__url, a.result__snippet, a.result__a"):
-                    h = a.attributes.get("href", "")
-                    if "uddg=" in h:
-                        pq = urllib.parse.parse_qs(urllib.parse.urlparse(h).query)
-                        if "uddg" in pq:
-                            candidate = pq["uddg"][0]
-                            if candidate.startswith("http") and not any(d in candidate for d in ("duckduckgo.com", "google.com")):
-                                return candidate
-        except Exception:
-            pass
+        candidate = resolve_via_bing_news(title, source)
+        if candidate and "news.google.com" not in candidate and "google.com" not in candidate:
+            return candidate
 
     return url
 

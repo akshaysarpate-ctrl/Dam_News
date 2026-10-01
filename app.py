@@ -736,13 +736,8 @@ def read_article(article_id):
             pass
         return redirect(resolved, code=302)
 
-    # In the rare event resolution fails, fallback to direct search query on DuckDuckGo
-    if title:
-        import urllib.parse
-        target = f"https://duckduckgo.com/?q={urllib.parse.quote(f'{title} {source}'.strip())}"
-        return redirect(target, code=302)
-
-    return redirect(url, code=302)
+    # Directly open the article without intermediate search screens
+    return redirect(resolved or url, code=302)
 
 
 @app.route("/export.csv")

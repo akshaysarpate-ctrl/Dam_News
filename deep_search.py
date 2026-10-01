@@ -188,6 +188,18 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
 
         valid_items.append(item)
 
+    # Decode Google News URLs to direct publisher URLs before inserting
+    urls_to_decode = [it["url"] for it in valid_items if "news.google.com" in it.get("url", "")]
+    if urls_to_decode:
+        try:
+            decoded = util.batch_decode_google_urls(urls_to_decode)
+            dec_map = dict(zip(urls_to_decode, decoded))
+            for it in valid_items:
+                if it.get("url") in dec_map and "news.google.com" not in dec_map[it["url"]]:
+                    it["url"] = dec_map[it["url"]]
+        except Exception as exc:
+            log.warning("Pre-insert URL decode error: %s", exc)
+
     for item in valid_items:
         if db.insert_article(conn, item):
             stats["items_added"] += 1
