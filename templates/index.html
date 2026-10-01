@@ -59,15 +59,23 @@
             </div>
           </div>
           <div class="top-actions-compact">
-            {% if job.status == 'running' %}
-              <span class="badge-bg-update-compact" title="A background news collection is running across all languages.">
-                <span class="spin-icon">&#x21bb;</span> Auto-updating
+            {% if last_updated_human %}
+              <div class="last-updated-badge" title="Database was last updated at: {{ last_updated_exact or last_run }}">
+                <span class="last-updated-icon">🕒</span>
+                <span class="last-updated-label">Last updated:</span>
+                <strong class="last-updated-val">{{ last_updated_human }}</strong>
+              </div>
+            {% endif %}
+
+            {% if is_my_search and job.status == 'running' %}
+              <span class="badge-bg-update-compact" title="Your background news refresh is running.">
+                <span class="spin-icon">&#x21bb;</span> Updating...
               </span>
             {% endif %}
             <form method="post" action="{{ url_for('refresh') }}" class="refresh-form-compact">
-              <button type="submit" class="refresh-btn-compact" {{ 'disabled' if job.status == 'running' }}
-                      title="{{ 'A collection is currently in progress across all languages' if job.status == 'running' else 'Fetch the latest news from the last 3 days across India' }}">
-                &#x21bb; {{ 'Updating...' if job.status == 'running' else 'Refresh news' }}
+              <button type="submit" class="refresh-btn-compact" {{ 'disabled' if (is_my_search and job.status == 'running') }}
+                      title="{{ 'Your refresh collection is currently in progress' if (is_my_search and job.status == 'running') else 'Fetch the latest news from the last 3 days across India' }}">
+                &#x21bb; {{ 'Updating...' if (is_my_search and job.status == 'running') else 'Refresh news' }}
               </button>
             </form>
           </div>

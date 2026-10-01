@@ -56,6 +56,32 @@ def today() -> date:
     return datetime.now(IST).date()
 
 
+def format_last_updated(ts_str):
+    """Convert UTC ISO timestamp to a user-friendly string in IST (e.g. '12m ago (01 Oct, 01:15 PM)')."""
+    if not ts_str:
+        return "", ""
+    try:
+        dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+        dt_ist = dt.astimezone(IST)
+        now_ist = datetime.now(IST)
+        sec = max(0, int((now_ist - dt_ist).total_seconds()))
+        if sec < 90:
+            rel = "Just now"
+        elif sec < 3600:
+            rel = f"{max(1, sec // 60)}m ago"
+        elif sec < 86400:
+            hrs = sec // 3600
+            mins = (sec % 3600) // 60
+            rel = f"{hrs}h {mins}m ago" if (mins > 0 and hrs < 4) else f"{hrs}h ago"
+        else:
+            days = sec // 86400
+            rel = f"{days}d ago"
+        exact = dt_ist.strftime("%d %b, %I:%M %p IST")
+        return f"{rel} ({exact})", exact
+    except Exception:
+        return ts_str, ts_str
+
+
 # ---------------------------------------------------------------- date range and filters
 def parse_range(start_text, end_text):
     """Return (start, end, error_key). Dates are India dates; end is clamped to today."""
@@ -374,7 +400,13 @@ def index():
     trend = trend_chart(dates, view)
     last = conn.execute("SELECT finished_at FROM runs WHERE finished_at IS NOT NULL "
                         "ORDER BY id DESC LIMIT 1").fetchone()
+    last_ts = last["finished_at"] if last and last["finished_at"] else None
+    if not last_ts:
+        art_row = conn.execute("SELECT MAX(fetched_at) FROM articles WHERE fetched_at IS NOT NULL").fetchone()
+        last_ts = art_row[0] if art_row and art_row[0] else None
     conn.close()
+
+    last_updated_human, last_updated_exact = format_last_updated(last_ts)
 
     job = jobs.snapshot()
     job["this_range"] = (job["start"] == view["start"].isoformat()
@@ -384,7 +416,9 @@ def index():
         "index.html", f=f, view=view, total=total, rows=rows,
         langs=langs, lang_total=sum(r["c"] for r in langs), states=states, kinds=kinds,
         bars=bars, peak=peak, trend=trend, pages=max(1, math.ceil(total / PAGE_SIZE)),
-        last_run=last["finished_at"] if last else None,
+        last_run=last_ts,
+        last_updated_human=last_updated_human,
+        last_updated_exact=last_updated_exact,
         notice=f["error"] or NOTICES.get(request.args.get("notice", ""), ""),
         job=job, is_my_search=is_my_search, today=today().isoformat(), has_youtube=bool(config.YOUTUBE_API_KEY),
         all_langs=[{"code": c, "name": v["name"], "native": v["native"]}
@@ -409,7 +443,7 @@ def search_web():
     if started:
         args["searching"] = "1"
     else:
-        args["notice"] = "busy"
+        args["searching"] = "1"
     return redirect(url_for("index", **args))
 
 
@@ -423,10 +457,8 @@ def refresh():
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}
-    if started:
-        args["searching"] = "1"
-    else:
-        args["notice"] = "busy"
+    # The user who explicitly clicked Refresh tracks it live
+    args["searching"] = "1"
     return redirect(url_for("index", **args))
 
 

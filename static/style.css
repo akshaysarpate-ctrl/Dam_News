@@ -786,6 +786,32 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+.last-updated-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.last-updated-icon {
+  font-size: 13.5px;
+  line-height: 1;
+}
+.last-updated-label {
+  color: #64748b;
+  font-weight: 500;
+}
+.last-updated-val {
+  color: #0f172a;
+  font-weight: 700;
 }
 .refresh-form-compact { margin: 0; }
 .refresh-btn-compact {
