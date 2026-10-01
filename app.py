@@ -579,6 +579,91 @@ def nrsd_dam_details(dam_id: int):
         conn.close()
 
 
+@app.get("/api/nrsd/districts")
+def nrsd_districts():
+    """Return matching districts from Column 12 (District) in NRSD with dam counts."""
+    q = request.args.get("q", "").strip()
+    conn = db.connect()
+    try:
+        if q:
+            query = """
+                SELECT district, state, COUNT(*) as dam_count
+                FROM (
+                    SELECT district, state, 1 as priority
+                    FROM nrsd_dams
+                    WHERE district IS NOT NULL AND district != '' AND district LIKE ? || '%'
+                    UNION ALL
+                    SELECT district, state, 2 as priority
+                    FROM nrsd_dams
+                    WHERE district IS NOT NULL AND district != '' AND district LIKE '%' || ? || '%' AND NOT (district LIKE ? || '%')
+                )
+                GROUP BY district, state
+                ORDER BY MIN(priority) ASC, dam_count DESC, district ASC
+                LIMIT 30
+            """
+            rows = conn.execute(query, (q, q, q)).fetchall()
+        else:
+            query = """
+                SELECT district, state, COUNT(*) as dam_count
+                FROM nrsd_dams
+                WHERE district IS NOT NULL AND district != ''
+                GROUP BY district, state
+                ORDER BY dam_count DESC, district ASC
+                LIMIT 30
+            """
+            rows = conn.execute(query).fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.get("/api/nrsd/district-dams")
+def nrsd_district_dams():
+    """Return all dams in a district (Column 12 in NRSD)."""
+    district = request.args.get("district", "").strip()
+    state = request.args.get("state", "").strip()
+    if not district:
+        return jsonify({"error": "District parameter is required"}), 400
+    conn = db.connect()
+    try:
+        if state:
+            query = """
+                SELECT id, sr_no, pic, name, state, district, river, river_basin,
+                       type_of_dam, height_m, length_m, gross_storage_mcm,
+                       effective_storage_mcm, spillway_capacity_cumec,
+                       year_commission, dam_owner, purpose
+                FROM nrsd_dams
+                WHERE district LIKE ? AND state LIKE ?
+                ORDER BY name ASC
+            """
+            rows = conn.execute(query, (district, state)).fetchall()
+        else:
+            query = """
+                SELECT id, sr_no, pic, name, state, district, river, river_basin,
+                       type_of_dam, height_m, length_m, gross_storage_mcm,
+                       effective_storage_mcm, spillway_capacity_cumec,
+                       year_commission, dam_owner, purpose
+                FROM nrsd_dams
+                WHERE district LIKE ?
+                ORDER BY name ASC
+            """
+            rows = conn.execute(query, (district,)).fetchall()
+
+        resolved_state = state or (rows[0]["state"] if rows else "")
+        return jsonify({
+            "district": district,
+            "state": resolved_state,
+            "count": len(rows),
+            "dams": [dict(r) for r in rows]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
 @app.get("/live-results")
 def live_results():
     """Return newly found articles since the last poll. Called by JS during a running search."""

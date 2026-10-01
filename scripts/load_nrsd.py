@@ -90,6 +90,7 @@ def run():
     conn.execute("CREATE INDEX idx_nrsd_name ON nrsd_dams(name COLLATE NOCASE)")
     conn.execute("CREATE INDEX idx_nrsd_pic ON nrsd_dams(pic)")
     conn.execute("CREATE INDEX idx_nrsd_state ON nrsd_dams(state COLLATE NOCASE)")
+    conn.execute("CREATE INDEX idx_nrsd_district ON nrsd_dams(district COLLATE NOCASE)")
 
     rows = []
     for _, r in df.iterrows():

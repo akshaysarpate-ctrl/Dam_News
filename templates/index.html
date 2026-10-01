@@ -10,61 +10,149 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="wrap">
 
-  <header class="top">
-    <div class="brand">
-      <h1>Dam failure news watch</h1>
-      <div class="auto-schedule-badge" title="Automated daily collection configured for 7:00 AM IST">
-        <span class="pulse-indicator"></span>
-        <span class="sched-text"><strong>Auto-updates daily at 7:00 AM IST</strong> • Next run: {{ scheduler.next_run_human }}</span>
+  <!-- FIXED TOP SECTION: Stays pinned at top on scroll -->
+  <header class="fixed-top-section" id="fixedTopSection">
+    <div class="top-bar-fullwidth">
+
+      <!-- COMPLETE TOP-LEFT: NRSD Dam Directory -->
+      <div class="top-corner-left">
+        <section class="nrsd-top-card" id="nrsd-section">
+          <div class="nrsd-card-header">
+            <span class="nrsd-badge-icon">🏛️</span>
+            <div>
+              <h3 class="nrsd-card-title">NRSD Dam Directory</h3>
+              <p class="nrsd-card-subtitle">Search 6,814 National Large Dams</p>
+            </div>
+          </div>
+
+          <div class="nrsd-inputs-stack">
+            <!-- 1. Type Dam Name -->
+            <div class="nrsd-search-field">
+              <span class="nrsd-input-icon">🔍</span>
+              <input type="text" id="nrsd-search-input" placeholder="Type dam name (e.g. Tehri, Sardar...)" autocomplete="off" spellcheck="false" aria-label="Type dam name">
+              <span id="nrsd-clear-icon" class="nrsd-clear-icon" style="display:none;" title="Clear search">✕</span>
+              <div id="nrsd-dropdown" class="nrsd-dropdown" style="display:none;" role="listbox"></div>
+            </div>
+
+            <!-- 2. Search District (Column 12 in NRSD) -->
+            <div class="nrsd-district-field">
+              <div class="nrsd-search-field district-field-wrap">
+                <span class="nrsd-input-icon">📍</span>
+                <input type="text" id="nrsd-district-input" placeholder="Search district in NRSD (e.g. Pune, Latur, Solapur...)" autocomplete="off" spellcheck="false" aria-label="Search district in NRSD">
+                <span id="nrsd-district-clear-icon" class="nrsd-clear-icon" style="display:none;" title="Clear district">✕</span>
+                <div id="nrsd-district-dropdown" class="nrsd-dropdown nrsd-district-dropdown" style="display:none;" role="listbox"></div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
-    <div class="top-actions">
-      {% if job.status == 'running' %}
-        <span class="badge-bg-update" title="A background news collection is running across all languages. You can continue browsing articles uninterrupted.">
-          <span class="spin-icon">&#x21bb;</span> Auto-updating in background
-        </span>
-      {% endif %}
-      <p class="stamp" id="last-collected-stamp">
-        {% if job.status == 'running' %}
-          <span class="collecting-pulse">&#x21bb; Refreshing live news feeds...</span>
-          {% if last_run %}<span class="sub-stamp">(Previous: {{ last_run|ist_datetime }})</span>{% endif %}
-        {% elif last_run %}
-          Last collected {{ last_run|ist_datetime }}
-        {% else %}
-          Nothing collected yet
-        {% endif %}
-      </p>
-      <form method="post" action="{{ url_for('refresh') }}" class="refresh-form">
-        <button type="submit" class="refresh-btn" {{ 'disabled' if job.status == 'running' }}
-                title="{{ 'A collection is currently in progress across all languages' if job.status == 'running' else 'Fetch the latest news from the last 3 days across India' }}">
-          &#x21bb; {{ 'Updating...' if job.status == 'running' else 'Refresh news now' }}
-        </button>
-      </form>
+
+      <!-- TOP-CENTER: Brand & Timeline Navigation -->
+      <div class="top-center-brand">
+        <div class="brand-top-row">
+          <div class="brand-title-wrap">
+            <h1 class="brand-main-title">Dam failure news watch</h1>
+            <div class="auto-schedule-badge" title="Automated daily collection configured for 7:00 AM IST">
+              <span class="pulse-indicator"></span>
+              <span class="sched-text"><strong>Auto-updates daily at 7:00 AM IST</strong> • Next run: {{ scheduler.next_run_human }}</span>
+            </div>
+          </div>
+          <div class="top-actions-compact">
+            {% if job.status == 'running' %}
+              <span class="badge-bg-update-compact" title="A background news collection is running across all languages.">
+                <span class="spin-icon">&#x21bb;</span> Auto-updating
+              </span>
+            {% endif %}
+            <form method="post" action="{{ url_for('refresh') }}" class="refresh-form-compact">
+              <button type="submit" class="refresh-btn-compact" {{ 'disabled' if job.status == 'running' }}
+                      title="{{ 'A collection is currently in progress across all languages' if job.status == 'running' else 'Fetch the latest news from the last 3 days across India' }}">
+                &#x21bb; {{ 'Updating...' if job.status == 'running' else 'Refresh news' }}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Quick Day Tabs & Period Range Tabs -->
+        <div class="center-tabs-row">
+          <nav class="day-tabs compact" aria-label="Quick day view">
+            {% for key, dt in DAY_TABS.items() %}
+              {% set active = (f.day == key and not view.custom and not f.start) %}
+              <a href="{{ qs(day=key, period=None, start=None, end=None) }}" class="{{ 'on' if active }}"
+                 {% if active %}aria-current="true"{% endif %}>{{ dt.label }}</a>
+            {% endfor %}
+          </nav>
+          <nav class="periods compact" aria-label="Time period">
+            {% for key, p in PERIODS.items() %}
+              {% set active = (key == f.period and not view.custom and not f.day) %}
+              <a href="{{ qs(period=key, day=None, start=None, end=None) }}" class="{{ 'on' if active }}"
+                 {% if active %}aria-current="true"{% endif %}>{{ p.label }}</a>
+            {% endfor %}
+            <a href="#custom-range-section" id="tab-custom-dates" class="{{ 'on' if view.custom }}" {% if view.custom %}aria-current="true"{% endif %} title="Select custom dates and search the internet">Custom dates</a>
+            <a href="{{ url_for('search_name') }}" class="name-tab-compact">&#x1F50D; Name search</a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- COMPLETE TOP-RIGHT: Filter Panel (Image 2) -->
+      <div class="top-corner-right">
+        <section class="filters-top-card">
+          <form method="get" action="{{ url_for('index') }}" class="find" id="filter-form">
+            <input type="hidden" name="period" value="{{ f.period }}">
+            {% if f.day %}<input type="hidden" name="day" value="{{ f.day }}">{% endif %}
+            {% if f.start %}<input type="hidden" name="start" value="{{ f.start.isoformat() }}"><input type="hidden" name="end" value="{{ f.end.isoformat() }}">{% endif %}
+            {% if f.lang %}<input type="hidden" name="lang" value="{{ f.lang }}">{% endif %}
+            {% if f.kind %}<input type="hidden" name="kind" value="{{ f.kind }}">{% endif %}
+            {% if f.q %}<input type="hidden" name="q" value="{{ f.q }}">{% endif %}
+
+            <div class="filter-state-row">
+              <div class="filter-state-control">
+                <label for="state">State</label>
+                <select id="state" name="state" onchange="this.form.submit()">
+                  <option value="">All states</option>
+                  {% for s in states %}
+                    <option value="{{ s.state }}" {{ 'selected' if s.state == f.state }}>{{ s.state }} ({{ s.c }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="filter-actions-inline">
+                <label class="check"><input type="checkbox" name="maybe" value="1" {{ 'checked' if f.maybe }} onchange="this.form.submit()">
+                  Include possible matches</label>
+                <button type="submit" class="btn-apply-state">Apply</button>
+              </div>
+            </div>
+          </form>
+
+          <div class="filter-row-section">
+            <span class="filter-heading-label">Type</span>
+            <ul class="pick pick-pills">
+              <li><a href="{{ qs(kind=None) }}" class="{{ 'on' if not f.kind }}">All <span>{{ kinds.get('article', 0) + kinds.get('video', 0) }}</span></a></li>
+              <li><a href="{{ qs(kind='article') }}" class="{{ 'on' if f.kind == 'article' }}">Articles <span>{{ kinds.get('article', 0) }}</span></a></li>
+              <li><a href="{{ qs(kind='video') }}" class="{{ 'on' if f.kind == 'video' }}">Videos <span>{{ kinds.get('video', 0) }}</span></a></li>
+            </ul>
+          </div>
+
+          <div class="filter-row-section">
+            <span class="filter-heading-label">Language</span>
+            <div class="lang-chips-wrapper">
+              <ul class="pick pick-chips">
+                <li><a href="{{ qs(lang=None) }}" class="{{ 'on' if not f.lang }}">All languages <span>{{ lang_total }}</span></a></li>
+                {% for l in langs %}
+                  <li><a href="{{ qs(lang=l.language) }}" class="{{ 'on' if f.lang == l.language }}" title="{{ l.language|lang_name }}">
+                    <span class="ln"><span class="native">{{ l.language|lang_native }}</span>{% if l.language != 'en' %} <span class="eng">{{ l.language|lang_name }}</span>{% endif %}</span>
+                    <span>{{ l.c }}</span></a></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+
     </div>
   </header>
 
-  {# ---------- quick day tabs ---------- #}
-  <nav class="day-tabs" aria-label="Quick day view">
-    {% for key, dt in DAY_TABS.items() %}
-      {% set active = (f.day == key and not view.custom and not f.start) %}
-      <a href="{{ qs(day=key, period=None, start=None, end=None) }}" class="{{ 'on' if active }}"
-         {% if active %}aria-current="true"{% endif %}>{{ dt.label }}</a>
-    {% endfor %}
-  </nav>
-
-  {# ---------- period range tabs ---------- #}
-  <nav class="periods" aria-label="Time period">
-    {% for key, p in PERIODS.items() %}
-      {% set active = (key == f.period and not view.custom and not f.day) %}
-      <a href="{{ qs(period=key, day=None, start=None, end=None) }}" class="{{ 'on' if active }}"
-         {% if active %}aria-current="true"{% endif %}>{{ p.label }}</a>
-    {% endfor %}
-    <a href="#custom-range-section" id="tab-custom-dates" class="{{ 'on' if view.custom }}" {% if view.custom %}aria-current="true"{% endif %} title="Select custom dates and search the internet">Custom dates</a>
-    <a href="{{ url_for('search_name') }}" class="name-tab">&#x1F50D; Search by name</a>
-    <a href="#nrsd-section" id="tab-nrsd-nav" class="nrsd-nav-btn" title="Search 6,814 National Large Dams in NRSD">🏛️ Search NRSD Dams</a>
-  </nav>
+  <!-- SCROLLABLE CONTENT AREA -->
+  <div class="wrap content-area">
 
   {# ---------- search the internet for a date range (visible ONLY when Custom dates is selected) ---------- #}
   <section class="range" id="custom-range-section" aria-labelledby="range-title" style="display: {{ 'block' if view.custom else 'none' }};">
@@ -179,66 +267,7 @@
   </section>
 
   <div class="layout">
-
-    <aside class="rail" aria-label="Filters">
-      <!-- NRSD Dam Directory Search Box -->
-      <section class="nrsd-sidebar-card" id="nrsd-section">
-        <div class="nrsd-card-header">
-          <span class="nrsd-badge-icon">🏛️</span>
-          <div>
-            <h3 class="nrsd-card-title">NRSD Dam Directory</h3>
-            <p class="nrsd-card-subtitle">Search 6,814 National Large Dams</p>
-          </div>
-        </div>
-        <div class="nrsd-search-field">
-          <input type="text" id="nrsd-search-input" placeholder="Type dam name (e.g. Tehri, Sardar...)" autocomplete="off" spellcheck="false" aria-label="Type dam name">
-          <span id="nrsd-clear-icon" class="nrsd-clear-icon" style="display:none;" title="Clear search">✕</span>
-        </div>
-        <div id="nrsd-dropdown" class="nrsd-dropdown" style="display:none;" role="listbox"></div>
-      </section>
-
-      <form method="get" action="{{ url_for('index') }}" class="find">
-        <input type="hidden" name="period" value="{{ f.period }}">
-        {% if f.day %}<input type="hidden" name="day" value="{{ f.day }}">{% endif %}
-        {% if f.start %}<input type="hidden" name="start" value="{{ f.start.isoformat() }}"><input type="hidden" name="end" value="{{ f.end.isoformat() }}">{% endif %}
-        {% if f.lang %}<input type="hidden" name="lang" value="{{ f.lang }}">{% endif %}
-        {% if f.kind %}<input type="hidden" name="kind" value="{{ f.kind }}">{% endif %}
-
-        <label for="q">Search these results</label>
-        <input id="q" type="search" name="q" value="{{ f.q }}" placeholder="Dam name, place or word">
-
-        <label for="state">State</label>
-        <select id="state" name="state" onchange="this.form.submit()">
-          <option value="">All states</option>
-          {% for s in states %}
-            <option value="{{ s.state }}" {{ 'selected' if s.state == f.state }}>{{ s.state }} ({{ s.c }})</option>
-          {% endfor %}
-        </select>
-
-        <label class="check"><input type="checkbox" name="maybe" value="1" {{ 'checked' if f.maybe }} onchange="this.form.submit()">
-          Include possible matches</label>
-        <button type="submit">Apply</button>
-      </form>
-
-      <h3>Type</h3>
-      <ul class="pick">
-        <li><a href="{{ qs(kind=None) }}" class="{{ 'on' if not f.kind }}">All <span>{{ kinds.get('article', 0) + kinds.get('video', 0) }}</span></a></li>
-        <li><a href="{{ qs(kind='article') }}" class="{{ 'on' if f.kind == 'article' }}">Articles <span>{{ kinds.get('article', 0) }}</span></a></li>
-        <li><a href="{{ qs(kind='video') }}" class="{{ 'on' if f.kind == 'video' }}">Videos <span>{{ kinds.get('video', 0) }}</span></a></li>
-      </ul>
-
-      <h3>Language</h3>
-      <ul class="pick">
-        <li><a href="{{ qs(lang=None) }}" class="{{ 'on' if not f.lang }}">All languages <span>{{ lang_total }}</span></a></li>
-        {% for l in langs %}
-          <li><a href="{{ qs(lang=l.language) }}" class="{{ 'on' if f.lang == l.language }}">
-            <span class="ln"><span class="native">{{ l.language|lang_native }}</span>{% if l.language != 'en' %} <span class="eng">{{ l.language|lang_name }}</span>{% endif %}</span>
-            <span>{{ l.c }}</span></a></li>
-        {% endfor %}
-      </ul>
-    </aside>
-
-    <main>
+    <main class="main-full">
       {% if f.state or f.lang or f.kind or f.q %}
         <div class="active-filters-bar">
           <span class="filter-intro">Active filters:</span>
@@ -334,6 +363,42 @@
         <button type="button" id="nrsd-modal-copy-btn" class="nrsd-btn-copy">📋 Copy Salient Features</button>
       </div>
       <button type="button" id="nrsd-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- NRSD District Dams List Modal Popup -->
+<div id="nrsd-district-modal-backdrop" class="nrsd-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="district-modal-title">
+  <div class="nrsd-modal district-modal-dialog">
+    <div class="nrsd-modal-header">
+      <div class="district-modal-title-box">
+        <span class="nrsd-badge-icon" style="font-size:22px;background:var(--water-tint);padding:6px 9px;border-radius:8px;">📍</span>
+        <div>
+          <h2 id="district-modal-title" class="nrsd-modal-title">Dams in District</h2>
+          <p id="district-modal-subtitle" class="district-modal-sub">Column 12 (District) in NRSD 2026</p>
+        </div>
+      </div>
+      <div class="district-modal-header-actions">
+        <a id="district-news-search-btn" href="#" class="btn-district-action news" target="_blank" title="Search recent news reports for this district">📰 Search District News</a>
+        <button type="button" id="district-copy-btn" class="btn-district-action copy" title="Copy dam names to clipboard">📋 Copy List</button>
+        <button type="button" id="district-modal-close-btn" class="nrsd-modal-close" aria-label="Close dialog">✕</button>
+      </div>
+    </div>
+    <div class="district-modal-toolbar">
+      <div class="district-filter-input-wrap">
+        <span class="district-filter-icon">🔍</span>
+        <input type="text" id="district-modal-filter-input" placeholder="Filter dams in this district (type name, river, or PIC)..." autocomplete="off">
+      </div>
+      <span id="district-modal-count-badge" class="district-badge-count">0 dams</span>
+    </div>
+    <div id="district-modal-body" class="district-modal-body">
+      <!-- Dam cards injected dynamically -->
+    </div>
+    <div class="nrsd-modal-footer">
+      <div class="district-footer-info">
+        <span>National Register of Large Dams (NRSD) • Column 12 (District)</span>
+      </div>
+      <button type="button" id="district-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
     </div>
   </div>
 </div>
@@ -522,107 +587,50 @@
     }
   });
 
-  // ---- NRSD Dam Directory Search & Salient Features Modal ----
+  // ---- NRSD Dam Directory & District Search & Modals ----
   (function() {
-    var input = document.getElementById('nrsd-search-input');
-    var dropdown = document.getElementById('nrsd-dropdown');
-    var clearBtn = document.getElementById('nrsd-clear-icon');
+    // Dam Search Elements
+    var damInput = document.getElementById('nrsd-search-input');
+    var damDropdown = document.getElementById('nrsd-dropdown');
+    var damClearBtn = document.getElementById('nrsd-clear-icon');
+    
+    // District Search Elements
+    var distInput = document.getElementById('nrsd-district-input');
+    var distDropdown = document.getElementById('nrsd-district-dropdown');
+    var distClearBtn = document.getElementById('nrsd-district-clear-icon');
+
+    // Salient Features Modal Elements
     var modalBackdrop = document.getElementById('nrsd-modal-backdrop');
-    var modalCloseBtn = document.getElementById('nrsd-modal-close-btn');
-    var modalDismissBtn = document.getElementById('nrsd-modal-dismiss-btn');
     var modalCopyBtn = document.getElementById('nrsd-modal-copy-btn');
-    var debounceTimer = null;
     var currentDamData = null;
-    var selectedIndex = -1;
 
-    if (!input || !dropdown) return;
+    // District Dams Modal Elements
+    var distModalBackdrop = document.getElementById('nrsd-district-modal-backdrop');
+    var distModalTitle = document.getElementById('district-modal-title');
+    var distModalSub = document.getElementById('district-modal-subtitle');
+    var distModalBody = document.getElementById('district-modal-body');
+    var distModalFilter = document.getElementById('district-modal-filter-input');
+    var distModalCount = document.getElementById('district-modal-count-badge');
+    var distCopyBtn = document.getElementById('district-copy-btn');
+    var distNewsBtn = document.getElementById('district-news-search-btn');
 
-    // Smooth scroll from top nav button
+    var damDebounce = null;
+    var distDebounce = null;
+    var damSelectedIndex = -1;
+    var distSelectedIndex = -1;
+    var currentDistrictDams = [];
+    var currentDistrictName = '';
+    var currentDistrictState = '';
+
+    // Smooth scroll from top nav button to NRSD card
     var navBtn = document.getElementById('tab-nrsd-nav');
-    if (navBtn) {
+    if (navBtn && damInput) {
       navBtn.addEventListener('click', function(e) {
         e.preventDefault();
-        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(function() { input.focus(); }, 350);
+        damInput.focus();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     }
-
-    input.addEventListener('input', function() {
-      var val = this.value.trim();
-      clearBtn.style.display = val ? 'block' : 'none';
-      clearTimeout(debounceTimer);
-      selectedIndex = -1;
-      if (val.length < 2) {
-        dropdown.style.display = 'none';
-        dropdown.innerHTML = '';
-        return;
-      }
-      debounceTimer = setTimeout(function() {
-        fetchSuggestions(val);
-      }, 180);
-    });
-
-    // Keyboard navigation (Arrow keys + Enter)
-    input.addEventListener('keydown', function(e) {
-      var items = dropdown.querySelectorAll('.nrsd-item');
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (items.length && dropdown.style.display !== 'none') {
-          var targetIndex = (selectedIndex >= 0 && selectedIndex < items.length) ? selectedIndex : 0;
-          items[targetIndex].click();
-        } else {
-          var val = input.value.trim();
-          if (val.length >= 2) {
-            fetch('/api/nrsd/suggest?q=' + encodeURIComponent(val))
-              .then(function(r) { return r.json(); })
-              .then(function(res) {
-                if (res && res.length) {
-                  openDamModal(res[0].id);
-                  dropdown.style.display = 'none';
-                } else {
-                  showToast('No registered dam found matching "' + val + '"');
-                }
-              })
-              .catch(function() {});
-          }
-        }
-        return;
-      }
-
-      if (!items.length || dropdown.style.display === 'none') return;
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedIndex = (selectedIndex + 1) % items.length;
-        updateSelected(items);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-        updateSelected(items);
-      } else if (e.key === 'Escape') {
-        dropdown.style.display = 'none';
-      }
-    });
-
-    function updateSelected(items) {
-      items.forEach(function(el, idx) {
-        if (idx === selectedIndex) {
-          el.classList.add('selected');
-          el.scrollIntoView({ block: 'nearest' });
-        } else {
-          el.classList.remove('selected');
-        }
-      });
-    }
-
-    clearBtn.addEventListener('click', function() {
-      input.value = '';
-      clearBtn.style.display = 'none';
-      dropdown.style.display = 'none';
-      dropdown.innerHTML = '';
-      input.focus();
-    });
 
     function esc(s) {
       if (s === undefined || s === null) return '';
@@ -639,13 +647,93 @@
       return before + '<mark>' + match + '</mark>' + after;
     }
 
-    function fetchSuggestions(query) {
+    // ==========================================
+    // 1. DAM NAME SEARCH
+    // ==========================================
+    if (damInput && damDropdown) {
+      damInput.addEventListener('input', function() {
+        var val = this.value.trim();
+        if (damClearBtn) damClearBtn.style.display = val ? 'block' : 'none';
+        clearTimeout(damDebounce);
+        damSelectedIndex = -1;
+        if (val.length < 2) {
+          damDropdown.style.display = 'none';
+          damDropdown.innerHTML = '';
+          return;
+        }
+        damDebounce = setTimeout(function() {
+          fetchDamSuggestions(val);
+        }, 180);
+      });
+
+      damInput.addEventListener('keydown', function(e) {
+        var items = damDropdown.querySelectorAll('.nrsd-item');
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (items.length && damDropdown.style.display !== 'none') {
+            var targetIndex = (damSelectedIndex >= 0 && damSelectedIndex < items.length) ? damSelectedIndex : 0;
+            items[targetIndex].click();
+          } else {
+            var val = damInput.value.trim();
+            if (val.length >= 2) {
+              fetch('/api/nrsd/suggest?q=' + encodeURIComponent(val))
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                  if (res && res.length) {
+                    openDamModal(res[0].id);
+                    damDropdown.style.display = 'none';
+                  } else {
+                    showToast('No registered dam found matching "' + val + '"');
+                  }
+                }).catch(function() {});
+            }
+          }
+          return;
+        }
+
+        if (!items.length || damDropdown.style.display === 'none') return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          damSelectedIndex = (damSelectedIndex + 1) % items.length;
+          updateSelected(items, damSelectedIndex);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          damSelectedIndex = (damSelectedIndex - 1 + items.length) % items.length;
+          updateSelected(items, damSelectedIndex);
+        } else if (e.key === 'Escape') {
+          damDropdown.style.display = 'none';
+        }
+      });
+
+      if (damClearBtn) {
+        damClearBtn.addEventListener('click', function() {
+          damInput.value = '';
+          damClearBtn.style.display = 'none';
+          damDropdown.style.display = 'none';
+          damDropdown.innerHTML = '';
+          damInput.focus();
+        });
+      }
+    }
+
+    function updateSelected(items, index) {
+      items.forEach(function(el, idx) {
+        if (idx === index) {
+          el.classList.add('selected');
+          el.scrollIntoView({ block: 'nearest' });
+        } else {
+          el.classList.remove('selected');
+        }
+      });
+    }
+
+    function fetchDamSuggestions(query) {
       fetch('/api/nrsd/suggest?q=' + encodeURIComponent(query))
         .then(function(r) { return r.json(); })
         .then(function(items) {
           if (!items || !items.length) {
-            dropdown.innerHTML = '<div class="nrsd-item-empty">No registered dams found matching "<strong>' + esc(query) + '</strong>"</div>';
-            dropdown.style.display = 'block';
+            damDropdown.innerHTML = '<div class="nrsd-item-empty">No registered dams found matching "<strong>' + esc(query) + '</strong>"</div>';
+            damDropdown.style.display = 'block';
             return;
           }
           var html = '';
@@ -663,52 +751,322 @@
             html += '  </div>';
             html += '</div>';
           });
-          dropdown.innerHTML = html;
-          dropdown.style.display = 'block';
+          damDropdown.innerHTML = html;
+          damDropdown.style.display = 'block';
 
-          dropdown.querySelectorAll('.nrsd-item').forEach(function(el) {
+          damDropdown.querySelectorAll('.nrsd-item').forEach(function(el) {
             el.addEventListener('click', function() {
               var damId = this.dataset.id;
               openDamModal(damId);
-              dropdown.style.display = 'none';
+              damDropdown.style.display = 'none';
             });
           });
-        })
-        .catch(function() {});
+        }).catch(function() {});
     }
 
-    // Hide dropdown when clicking outside
+    // ==========================================
+    // 2. DISTRICT SEARCH (Column 12 in NRSD)
+    // ==========================================
+    if (distInput && distDropdown) {
+      distInput.addEventListener('input', function() {
+        var val = this.value.trim();
+        if (distClearBtn) distClearBtn.style.display = val ? 'block' : 'none';
+        clearTimeout(distDebounce);
+        distSelectedIndex = -1;
+        if (!val) {
+          distDropdown.style.display = 'none';
+          distDropdown.innerHTML = '';
+          return;
+        }
+        distDebounce = setTimeout(function() {
+          fetchDistrictSuggestions(val);
+        }, 160);
+      });
+
+      distInput.addEventListener('focus', function() {
+        var val = this.value.trim();
+        if (val) {
+          fetchDistrictSuggestions(val);
+        } else {
+          // Show top districts when clicking an empty district input
+          fetchDistrictSuggestions('');
+        }
+      });
+
+      distInput.addEventListener('keydown', function(e) {
+        var items = distDropdown.querySelectorAll('.nrsd-district-item');
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (items.length && distDropdown.style.display !== 'none') {
+            var targetIndex = (distSelectedIndex >= 0 && distSelectedIndex < items.length) ? distSelectedIndex : 0;
+            items[targetIndex].click();
+          } else {
+            var val = distInput.value.trim();
+            if (val) {
+              fetch('/api/nrsd/districts?q=' + encodeURIComponent(val))
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                  if (res && res.length) {
+                    openDistrictModal(res[0].district, res[0].state);
+                    distDropdown.style.display = 'none';
+                  } else {
+                    showToast('No registered district found matching "' + val + '"');
+                  }
+                }).catch(function() {});
+            }
+          }
+          return;
+        }
+
+        if (!items.length || distDropdown.style.display === 'none') return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          distSelectedIndex = (distSelectedIndex + 1) % items.length;
+          updateSelected(items, distSelectedIndex);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          distSelectedIndex = (distSelectedIndex - 1 + items.length) % items.length;
+          updateSelected(items, distSelectedIndex);
+        } else if (e.key === 'Escape') {
+          distDropdown.style.display = 'none';
+        }
+      });
+
+      if (distClearBtn) {
+        distClearBtn.addEventListener('click', function() {
+          distInput.value = '';
+          distClearBtn.style.display = 'none';
+          distDropdown.style.display = 'none';
+          distDropdown.innerHTML = '';
+          distInput.focus();
+        });
+      }
+    }
+
+    function fetchDistrictSuggestions(query) {
+      fetch('/api/nrsd/districts?q=' + encodeURIComponent(query))
+        .then(function(r) { return r.json(); })
+        .then(function(items) {
+          if (!items || !items.length) {
+            distDropdown.innerHTML = '<div class="nrsd-item-empty">No district found matching "<strong>' + esc(query) + '</strong>"</div>';
+            distDropdown.style.display = 'block';
+            return;
+          }
+          var html = '';
+          items.forEach(function(item) {
+            html += '<div class="nrsd-district-item" data-district="' + esc(item.district) + '" data-state="' + esc(item.state || '') + '" role="option">';
+            html += '  <div class="nrsd-district-info">';
+            html += '    <span class="nrsd-district-name">📍 ' + (query ? highlightMatch(item.district, query) : esc(item.district)) + '</span>';
+            if (item.state) html += '    <span class="nrsd-district-state">— ' + esc(item.state) + '</span>';
+            html += '  </div>';
+            html += '  <span class="nrsd-district-count">' + item.dam_count + ' ' + (item.dam_count === 1 ? 'dam' : 'dams') + '</span>';
+            html += '</div>';
+          });
+          distDropdown.innerHTML = html;
+          distDropdown.style.display = 'block';
+
+          distDropdown.querySelectorAll('.nrsd-district-item').forEach(function(el) {
+            el.addEventListener('click', function() {
+              var dName = this.dataset.district;
+              var dState = this.dataset.state;
+              if (distInput) distInput.value = dName;
+              if (distClearBtn) distClearBtn.style.display = 'block';
+              distDropdown.style.display = 'none';
+              openDistrictModal(dName, dState);
+            });
+          });
+        }).catch(function() {});
+    }
+
+    // Hide dropdowns when clicking outside
     document.addEventListener('click', function(e) {
-      if (!dropdown.contains(e.target) && e.target !== input && e.target !== clearBtn) {
-        dropdown.style.display = 'none';
+      if (damDropdown && !damDropdown.contains(e.target) && e.target !== damInput && e.target !== damClearBtn) {
+        damDropdown.style.display = 'none';
+      }
+      if (distDropdown && !distDropdown.contains(e.target) && e.target !== distInput && e.target !== distClearBtn) {
+        distDropdown.style.display = 'none';
       }
     });
 
-    function closeModal() {
-      var modal = document.getElementById('nrsd-modal-backdrop');
-      if (modal) modal.classList.remove('open');
+    // ==========================================
+    // 3. DISTRICT DAMS MODAL POPUP
+    // ==========================================
+    function openDistrictModal(district, state) {
+      if (!distModalBackdrop) return;
+      currentDistrictName = district;
+      currentDistrictState = state || '';
+
+      if (distModalTitle) distModalTitle.textContent = 'Dams in ' + district;
+      if (distModalSub) distModalSub.textContent = (state ? state + ' • ' : '') + 'Loading dams from NRSD 2026 (Column 12)...';
+      if (distModalCount) distModalCount.textContent = 'Loading...';
+      if (distModalFilter) distModalFilter.value = '';
+      if (distNewsBtn) {
+        distNewsBtn.href = '/?q=' + encodeURIComponent(district);
+        distNewsBtn.title = 'Search recent failure/distress news for ' + district;
+      }
+
+      if (distModalBody) {
+        distModalBody.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1;">' +
+                                  '  <span class="spin-icon" style="font-size:24px;display:inline-block;margin-bottom:8px;">↻</span>' +
+                                  '  <p>Fetching registered large dams in ' + esc(district) + '...</p>' +
+                                  '</div>';
+      }
+
+      distModalBackdrop.classList.add('open');
+
+      var apiUrl = '/api/nrsd/district-dams?district=' + encodeURIComponent(district) + (state ? ('&state=' + encodeURIComponent(state)) : '');
+      fetch(apiUrl)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          currentDistrictDams = data.dams || [];
+          var totalCount = currentDistrictDams.length;
+          var resolvedState = data.state || state || '';
+          currentDistrictState = resolvedState;
+
+          if (distModalTitle) {
+            distModalTitle.textContent = 'Dams in ' + district + ' (' + totalCount + ' Large Dams)';
+          }
+          if (distModalSub) {
+            distModalSub.textContent = (resolvedState ? resolvedState + ' • ' : '') + 'Column 12 (District) in NRSD 2026 • ' + totalCount + ' Registered Large Dams';
+          }
+          if (distModalCount) {
+            distModalCount.textContent = totalCount + ' ' + (totalCount === 1 ? 'dam' : 'dams');
+          }
+
+          renderDistrictDamCards(currentDistrictDams);
+          if (distModalFilter) distModalFilter.focus();
+        })
+        .catch(function(err) {
+          if (distModalBody) {
+            distModalBody.innerHTML = '<div style="padding:30px;text-align:center;color:#b91c1c;grid-column:1/-1;">Error loading dams: ' + esc(err.message || err) + '</div>';
+          }
+        });
     }
 
-    // Delegated close clicks
+    function renderDistrictDamCards(dams) {
+      if (!distModalBody) return;
+      if (!dams || !dams.length) {
+        distModalBody.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);grid-column:1/-1;">No dams match your search filter in this district.</div>';
+        return;
+      }
+
+      var html = '';
+      dams.forEach(function(d) {
+        html += '<div class="district-dam-card" data-dam-id="' + d.id + '">';
+        html += '  <div class="district-dam-top">';
+        html += '    <span class="district-dam-name">' + esc(d.name) + '</span>';
+        if (d.pic) html += '    <span class="district-dam-pic">' + esc(d.pic) + '</span>';
+        html += '  </div>';
+        html += '  <div class="district-dam-specs">';
+        html += '    <span><strong class="district-spec-k">River:</strong> ' + esc(d.river || 'Local Stream') + (d.river_basin ? ' (' + esc(d.river_basin) + ' Basin)' : '') + '</span>';
+        html += '    <span><strong class="district-spec-k">Type:</strong> ' + esc(d.type_of_dam || '—') + '</span>';
+        var dims = [];
+        if (d.height_m) dims.push('Height: ' + esc(d.height_m) + 'm');
+        if (d.length_m) dims.push('Length: ' + esc(d.length_m) + 'm');
+        if (dims.length) html += '    <span><strong class="district-spec-k">Dims:</strong> ' + dims.join(', ') + '</span>';
+        if (d.gross_storage_mcm) html += '    <span><strong class="district-spec-k">Storage:</strong> ' + esc(d.gross_storage_mcm) + ' MCM</span>';
+        if (d.year_commission) html += '    <span><strong class="district-spec-k">Year:</strong> ' + esc(d.year_commission) + '</span>';
+        if (d.dam_owner) html += '    <span><strong class="district-spec-k">Owner:</strong> ' + esc(d.dam_owner) + '</span>';
+        html += '  </div>';
+        html += '  <div class="district-dam-card-actions">';
+        html += '    <button type="button" class="btn-dam-salient" data-id="' + d.id + '">🏛️ Salient Features</button>';
+        html += '    <a href="/search-name?name=' + encodeURIComponent(d.name) + '" target="_blank" class="btn-dam-news" title="Search all newspaper reports for ' + esc(d.name) + '">🔍 News</a>';
+        html += '  </div>';
+        html += '</div>';
+      });
+      distModalBody.innerHTML = html;
+
+      // Wire salient features button clicks
+      distModalBody.querySelectorAll('.btn-dam-salient').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var damId = this.dataset.id;
+          openDamModal(damId);
+        });
+      });
+    }
+
+    // In-modal live filter
+    if (distModalFilter) {
+      distModalFilter.addEventListener('input', function() {
+        var q = this.value.trim().toLowerCase();
+        if (!q) {
+          renderDistrictDamCards(currentDistrictDams);
+          if (distModalCount) distModalCount.textContent = currentDistrictDams.length + ' dams';
+          return;
+        }
+        var filtered = currentDistrictDams.filter(function(d) {
+          return (d.name && d.name.toLowerCase().indexOf(q) !== -1) ||
+                 (d.river && d.river.toLowerCase().indexOf(q) !== -1) ||
+                 (d.pic && d.pic.toLowerCase().indexOf(q) !== -1) ||
+                 (d.type_of_dam && d.type_of_dam.toLowerCase().indexOf(q) !== -1);
+        });
+        renderDistrictDamCards(filtered);
+        if (distModalCount) distModalCount.textContent = filtered.length + ' of ' + currentDistrictDams.length + ' dams';
+      });
+    }
+
+    // Copy district dams list to clipboard
+    if (distCopyBtn) {
+      distCopyBtn.addEventListener('click', function() {
+        if (!currentDistrictDams || !currentDistrictDams.length) return;
+        var lines = [];
+        lines.push('National Register of Large Dams (NRSD 2026)');
+        lines.push('District: ' + currentDistrictName + (currentDistrictState ? ' (' + currentDistrictState + ')' : ''));
+        lines.push('Total Large Dams: ' + currentDistrictDams.length);
+        lines.push('----------------------------------------');
+        currentDistrictDams.forEach(function(d, idx) {
+          var details = [];
+          if (d.pic) details.push('PIC: ' + d.pic);
+          if (d.river) details.push('River: ' + d.river);
+          if (d.type_of_dam) details.push('Type: ' + d.type_of_dam);
+          if (d.height_m) details.push('Height: ' + d.height_m + 'm');
+          if (d.gross_storage_mcm) details.push('Storage: ' + d.gross_storage_mcm + ' MCM');
+          if (d.year_commission) details.push('Year: ' + d.year_commission);
+          lines.push((idx + 1) + '. ' + d.name + (details.length ? ' (' + details.join(', ') + ')' : ''));
+        });
+        var text = lines.join('\n');
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(function() {
+            showToast('Copied ' + currentDistrictDams.length + ' dams to clipboard!');
+          });
+        }
+      });
+    }
+
+    // Modal Close Functions
+    function closeDamModal() {
+      if (modalBackdrop) modalBackdrop.classList.remove('open');
+    }
+    function closeDistrictModal() {
+      if (distModalBackdrop) distModalBackdrop.classList.remove('open');
+    }
+
     document.addEventListener('click', function(e) {
       if (!e.target) return;
       if (e.target.id === 'nrsd-modal-close-btn' || e.target.id === 'nrsd-modal-dismiss-btn' || e.target.id === 'nrsd-modal-backdrop') {
-        closeModal();
+        closeDamModal();
+      }
+      if (e.target.id === 'district-modal-close-btn' || e.target.id === 'district-modal-dismiss-btn' || e.target.id === 'nrsd-district-modal-backdrop') {
+        closeDistrictModal();
       }
     });
 
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
-        closeModal();
+        if (modalBackdrop && modalBackdrop.classList.contains('open')) {
+          closeDamModal();
+        } else if (distModalBackdrop && distModalBackdrop.classList.contains('open')) {
+          closeDistrictModal();
+        }
       }
     });
 
+    // ==========================================
+    // 4. DAM SALIENT FEATURES MODAL
+    // ==========================================
     function openDamModal(damId) {
-      var modal = document.getElementById('nrsd-modal-backdrop');
-      if (!modal) {
-        console.error('Modal element nrsd-modal-backdrop not found in DOM');
-        return;
-      }
+      if (!modalBackdrop) return;
       fetch('/api/nrsd/dam/' + damId)
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -725,7 +1083,6 @@
           if (stateEl) stateEl.textContent = data.state || 'India';
           if (distEl) distEl.textContent = data.district ? ('District: ' + data.district) : '';
 
-          // Map coordinates link (Exact pinpoint via decimal lat/lng)
           var mapLinkHtml = '';
           if (data.lat_dec && data.lng_dec) {
             var mapsUrl = 'https://www.google.com/maps?q=' + data.lat_dec + ',' + data.lng_dec;
@@ -742,14 +1099,12 @@
             mapLinkHtml = '<div class="nrsd-maps-container"><div class="nrsd-maps-links"><a href="' + fallbackUrl + '" target="_blank" rel="noopener noreferrer" class="nrsd-btn-map pin">📍 Open in Maps ↗</a></div></div>';
           }
 
-          // Direct search news link
           var searchLink = document.getElementById('nrsd-modal-search-link');
           if (searchLink) {
             searchLink.href = '/search-name?name=' + encodeURIComponent(data.name);
             searchLink.title = 'Search failure and distress news reports for ' + data.name;
           }
 
-          // Build 4 salient feature cards
           var body = document.getElementById('nrsd-modal-body');
           if (body) {
             body.innerHTML = 
@@ -796,7 +1151,7 @@
               '</div>';
           }
 
-          modal.classList.add('open');
+          modalBackdrop.classList.add('open');
         })
         .catch(function(err) {
           console.error(err);
