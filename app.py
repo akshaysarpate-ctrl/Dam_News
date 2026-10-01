@@ -337,7 +337,7 @@ def helpers():
 
 
 # ---------------------------------------------------------------- routes
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def index():
     f = parse_filters()
     view = view_window(f)
@@ -381,12 +381,11 @@ def index():
                    for c, v in config.LANGUAGES.items()])
 
 
-@app.post("/search-web")
+@app.route("/search-web", methods=["GET", "POST"])
 def search_web():
     """Start a live internet search for the chosen dates, then show the page with progress."""
-    origin = request.headers.get("Origin")
-    if origin and urlparse(origin).netloc != request.host:
-        abort(403)
+    if request.method == "GET":
+        return redirect(url_for("index"))
     start, end, err = parse_range(request.form.get("start", ""), request.form.get("end", ""))
     if err:
         return redirect(url_for("index", notice=err))
@@ -404,12 +403,9 @@ def search_web():
     return redirect(url_for("index", **args))
 
 
-@app.post("/refresh")
+@app.route("/refresh", methods=["GET", "POST"])
 def refresh():
     """One-click refresh: search the last 3 days for all languages."""
-    origin = request.headers.get("Origin")
-    if origin and urlparse(origin).netloc != request.host:
-        abort(403)
     end = today()
     start = end - timedelta(days=2)
     langs = list(config.LANGUAGES)
