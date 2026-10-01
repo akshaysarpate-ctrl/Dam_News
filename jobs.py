@@ -9,10 +9,13 @@ import collect
 import config
 import db
 
+import time
+
 log = logging.getLogger("jobs")
 _lock = threading.Lock()
 _state = {"status": "idle", "message": "", "done": 0, "total": 0, "added": 0,
-          "seen": 0, "start": "", "end": "", "notes": [], "error": ""}
+          "seen": 0, "start": "", "end": "", "notes": [], "error": "",
+          "started_at": 0, "finished_at": ""}
 
 
 def snapshot() -> dict:
@@ -30,14 +33,19 @@ def _update(**fields):
 
 def start(start_date, end_date, langs, sources, ai_limit=120,
           workers=None, window_days=31) -> bool:
-    """Start a search. Returns False if one is already running."""
+    """Start a search. Returns False if one is already actively running."""
     if workers is None:
         workers = config.SEARCH_WORKERS
     with _lock:
         if _state["status"] == "running":
-            return False
+            # If the previous job has been running for > 3 minutes, consider it stale/timed out
+            if time.time() - _state.get("started_at", 0) > 180:
+                log.warning("Previous job appears stuck (>180s) - overriding with new search")
+            else:
+                return False
         _state.update(status="running", message="Starting", done=0, total=0, added=0, seen=0,
-                      start=start_date.isoformat(), end=end_date.isoformat(), notes=[], error="")
+                      start=start_date.isoformat(), end=end_date.isoformat(), notes=[], error="",
+                      started_at=time.time())
     threading.Thread(target=_work,
                      args=(start_date, end_date, langs, sources, ai_limit, workers, window_days),
                      daemon=True).start()
@@ -57,7 +65,7 @@ def _work(start_date, end_date, langs, sources, ai_limit, workers, window_days):
                                       window_days=window_days,
                                       ai_limit=ai_limit, progress=progress)
         _update(status="done", message="Finished", added=stats["added"], seen=stats["seen"],
-                notes=stats["notes"], done=1, total=1)
+                notes=stats["notes"], done=1, total=1, finished_at=db.now_iso())
     except Exception as exc:  # anything unexpected: report it on the page instead of dying silently
         log.exception("Search job failed")
         _update(status="error", message="The search stopped because of an error.",

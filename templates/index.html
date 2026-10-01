@@ -59,7 +59,13 @@
             </div>
           </div>
           <div class="top-actions-compact">
-            {% if last_updated_human %}
+            {% if is_my_search and job.status == 'running' %}
+              <div class="last-updated-badge refreshing" title="Refresh collection is currently in progress...">
+                <span class="spin-icon" style="display:inline-block; animation:spin 1s linear infinite;">&#x21bb;</span>
+                <span class="last-updated-label">Status:</span>
+                <strong class="last-updated-val" style="color:var(--water-deep,#0284c7);">Updating news...</strong>
+              </div>
+            {% elif last_updated_human %}
               <div class="last-updated-badge" title="Database was last updated at: {{ last_updated_exact or last_run }}">
                 <span class="last-updated-icon">🕒</span>
                 <span class="last-updated-label">Last updated:</span>
@@ -67,11 +73,6 @@
               </div>
             {% endif %}
 
-            {% if is_my_search and job.status == 'running' %}
-              <span class="badge-bg-update-compact" title="Your background news refresh is running.">
-                <span class="spin-icon">&#x21bb;</span> Updating...
-              </span>
-            {% endif %}
             <form method="post" action="{{ url_for('refresh') }}" class="refresh-form-compact">
               <button type="submit" class="refresh-btn-compact" {{ 'disabled' if (is_my_search and job.status == 'running') }}
                       title="{{ 'Your refresh collection is currently in progress' if (is_my_search and job.status == 'running') else 'Fetch the latest news from the last 3 days across India' }}">

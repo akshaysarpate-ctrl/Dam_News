@@ -406,9 +406,12 @@ def index():
         last_ts = art_row[0] if art_row and art_row[0] else None
     conn.close()
 
+    job = jobs.snapshot()
+    if job.get("finished_at") and (not last_ts or job["finished_at"] > last_ts):
+        last_ts = job["finished_at"]
+
     last_updated_human, last_updated_exact = format_last_updated(last_ts)
 
-    job = jobs.snapshot()
     job["this_range"] = (job["start"] == view["start"].isoformat()
                          and job["end"] == view["end"].isoformat())
     is_my_search = request.args.get("searching") == "1"
@@ -449,11 +452,11 @@ def search_web():
 
 @app.route("/refresh", methods=["GET", "POST"])
 def refresh():
-    """One-click refresh: search the last 3 days for all languages."""
+    """One-click refresh: fast search of the last 3 days across all Indian languages via Google News."""
     end = today()
     start = end - timedelta(days=2)
     langs = list(config.LANGUAGES)
-    sources = ["gnews", "gdelt"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
+    sources = ["gnews"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}

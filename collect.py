@@ -49,17 +49,6 @@ def store(conn, items, stats):
         item["score"], item["status"], item["state"] = verdict
         valid.append(item)
 
-    gnews = [it for it in valid if "news.google.com" in it.get("url", "")]
-    if gnews:
-        try:
-            urls = [it["url"] for it in gnews]
-            decoded = util.batch_decode_google_urls(urls)
-            for it, dec in zip(gnews, decoded):
-                if dec:
-                    it["url"] = dec
-        except Exception:
-            pass
-
     for item in valid:
         if db.insert_article(conn, item):
             stats["added"] += 1
@@ -125,37 +114,70 @@ def collect_range(conn, start: date, end: date, langs=None,
             log.exception("A search step failed and was skipped")
             return kind, []
 
-    # ---- news and video searches (in parallel when workers > 1)
-    report("Searching news and videos")
-    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-        futures = [pool.submit(run_one, t) for t in tasks]
-        for fut in as_completed(futures):
-            kind, items = fut.result()
-            if items is None:
-                state["youtube_stopped"] = True
-                stats["notes"].append("YouTube's daily quota ran out, so some videos are missing.")
-                items = []
-            store(conn, items, stats)
+    try:
+        # ---- news and video searches (in parallel when workers > 1)
+        report("Searching news and videos")
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+            futures = [pool.submit(run_one, t) for t in tasks]
+            for fut in as_completed(futures):
+                kind, items = fut.result()
+                if items is None:
+                    state["youtube_stopped"] = True
+                    stats["notes"].append("YouTube's daily quota ran out, so some videos are missing.")
+                    items = []
+                store(conn, items, stats)
+                state["done"] += 1
+                report("Searching news and videos")
+
+        # ---- GDELT (one request every ~6 seconds, so it runs one at a time)
+        for query in gdelt_queries:
+            report("Searching GDELT")
+            try:
+                store(conn, gdelt.fetch(query, gdelt_start, end), stats)
+            except Exception as e:
+                log.warning("GDELT query %r failed: %s", query, e)
             state["done"] += 1
-            report("Searching news and videos")
+        if gdelt_queries:
+            report("Searching GDELT")
 
-    # ---- GDELT (one request every ~6 seconds, so it runs one at a time)
-    for query in gdelt_queries:
-        report("Searching GDELT")
-        store(conn, gdelt.fetch(query, gdelt_start, end), stats)
-        state["done"] += 1
-    if gdelt_queries:
-        report("Searching GDELT")
+        # ---- optional AI check
+        if use_ai and config.ANTHROPIC_API_KEY:
+            report("Checking results with AI")
+            try:
+                classify.classify_pending(conn, ai_limit)
+            except Exception as e:
+                log.warning("AI classification failed: %s", e)
+        elif use_ai:
+            log.info("ANTHROPIC_API_KEY not set - using keyword scoring only.")
+    finally:
+        db.finish_run(conn, run_id, stats["seen"], stats["added"])
 
-    # ---- optional AI check
-    if use_ai and config.ANTHROPIC_API_KEY:
-        report("Checking results with AI")
-        classify.classify_pending(conn, ai_limit)
-    elif use_ai:
-        log.info("ANTHROPIC_API_KEY not set - using keyword scoring only.")
-
-    db.finish_run(conn, run_id, stats["seen"], stats["added"])
     stats["notes"] = list(dict.fromkeys(stats["notes"]))
+
+    # Decode Google News URLs asynchronously in background so collection finishes immediately
+    if stats["added"] > 0:
+        def _bg_decode():
+            try:
+                import time as _t
+                _t.sleep(1.0)
+                bg_conn = db.connect()
+                rows = bg_conn.execute(
+                    "SELECT id, url FROM articles WHERE url LIKE '%news.google.com%' ORDER BY id DESC LIMIT 50"
+                ).fetchall()
+                if rows:
+                    urls = [r["url"] for r in rows]
+                    decoded = util.batch_decode_google_urls(urls)
+                    updates = [(d, r["id"]) for r, d in zip(rows, decoded) if d and "news.google.com" not in d]
+                    if updates:
+                        bg_conn.executemany("UPDATE articles SET url = ? WHERE id = ?", updates)
+                        bg_conn.commit()
+                bg_conn.close()
+            except Exception as exc:
+                log.warning("Background URL decode error: %s", exc)
+
+        import threading
+        threading.Thread(target=_bg_decode, daemon=True).start()
+
     return stats
 
 
