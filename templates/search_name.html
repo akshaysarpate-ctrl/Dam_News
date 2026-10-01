@@ -169,7 +169,7 @@
               <li class="item">
                 <div class="body">
                   <a class="headline" lang="{{ a.language if a.language != 'und' else '' }}"
-                     href="{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id) }}"
+                     href="{{ a.url }}"
                      target="_blank" rel="noopener noreferrer">{{ a.title }}</a>
                   <div class="meta">
                     <span class="src">{{ a.source or 'Unknown source' }}</span>
@@ -183,16 +183,16 @@
                   {% if a.snippet %}<p class="snippet">{{ a.snippet|truncate(220) }}</p>{% endif %}
                   <div class="card-actions">
                     <a class="btn-read-link"
-                       href="{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id) }}"
+                       href="{{ a.url }}"
                        target="_blank" rel="noopener noreferrer">Read full story ↗</a>
                     <button type="button" class="btn-copy-link"
-                       onclick="copyLink('{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id, _external=True) }}', this)"
+                       onclick="copyLink('{{ a.url }}', this)"
                        title="Copy article URL">📋 Copy link</button>
                   </div>
                 </div>
                 {% if a.thumbnail %}
                   <a class="thumb"
-                     href="{{ a.url if ('news.google.com' not in a.url and 'google.com' not in a.url) else url_for('read_article', article_id=a.id) }}"
+                     href="{{ a.url }}"
                      target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
                     <img src="{{ a.thumbnail }}" alt="" loading="lazy" width="120" height="68">
                   </a>

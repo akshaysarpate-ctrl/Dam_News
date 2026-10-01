@@ -692,7 +692,7 @@ def live_results():
         max_id = max(max_id, r["id"])
         articles.append({
             "id": r["id"], "kind": r["kind"], "title": r["title"], "url": r["url"],
-            "read_url": url_for("read_article", article_id=r["id"]),
+            "read_url": r["url"],
             "source": r["source"] or "Unknown source",
             "language": config.LANGUAGES.get(r["language"], {}).get("name", "Other"),
             "published_at": r["published_at"],
@@ -708,36 +708,39 @@ def live_results():
 
 
 @app.route("/read/<int:article_id>")
-def read_article(article_id):
-    """Safely open article directly at publisher website without intermediate redirect screens."""
-    conn = db.connect()
-    row = conn.execute("SELECT id, title, source, url FROM articles WHERE id = ?", (article_id,)).fetchone()
-    conn.close()
-    if not row:
-        abort(404)
+@app.route("/read")
+def read_article(article_id=None):
+    """Safely open article directly at publisher website without intermediate redirect screens or 404s."""
+    target_url = request.args.get("url", "").strip()
+    if article_id:
+        conn = db.connect()
+        row = conn.execute("SELECT id, title, source, url FROM articles WHERE id = ?", (article_id,)).fetchone()
+        conn.close()
+        if row:
+            target_url = row["url"] or target_url
+            title = row["title"] or ""
+            source = row["source"] or ""
 
-    url = row["url"] or ""
-    title = row["title"] or ""
-    source = row["source"] or ""
+            if target_url and "news.google.com" not in target_url and "google.com" not in target_url:
+                return redirect(target_url, code=302)
 
-    # If already a direct publisher URL (not Google News redirect), open immediately
-    if url and "news.google.com" not in url and "google.com" not in url:
-        return redirect(url, code=302)
+            resolved = util.resolve_news_url(target_url, title=title, source=source)
+            if resolved and "news.google.com" not in resolved and "google.com" not in resolved:
+                try:
+                    c2 = db.connect()
+                    c2.execute("UPDATE articles SET url = ? WHERE id = ?", (resolved, article_id))
+                    c2.commit()
+                    c2.close()
+                except Exception:
+                    pass
+                return redirect(resolved, code=302)
+            if resolved:
+                return redirect(resolved, code=302)
 
-    resolved = util.resolve_news_url(url, title=title, source=source)
-    # If resolved to a clean publisher URL, persist to DB so next clicks are instant
-    if resolved and "news.google.com" not in resolved and "google.com" not in resolved:
-        try:
-            conn = db.connect()
-            conn.execute("UPDATE articles SET url = ? WHERE id = ?", (resolved, article_id))
-            conn.commit()
-            conn.close()
-        except Exception:
-            pass
-        return redirect(resolved, code=302)
+    if target_url:
+        return redirect(target_url, code=302)
 
-    # Directly open the article without intermediate search screens
-    return redirect(resolved or url, code=302)
+    return redirect(url_for("index"), code=302)
 
 
 @app.route("/export.csv")
