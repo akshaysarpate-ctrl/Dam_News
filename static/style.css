@@ -612,7 +612,7 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   background: var(--paper);
   border-bottom: 2px solid var(--line);
   box-shadow: 0 4px 18px rgba(18, 38, 44, 0.08);
-  padding: 8px 16px;
+  padding: 12px 20px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -620,25 +620,25 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 /* 3-Column Top Bar Deck: Complete Left (NRSD), Center (Brand & Tabs), Complete Right (Filters) */
 .top-bar-fullwidth {
   display: grid;
-  grid-template-columns: 285px 1fr 345px;
-  gap: 14px;
+  grid-template-columns: 350px 1fr 410px;
+  gap: 18px;
   align-items: start;
   width: 100%;
-  max-width: 1800px;
+  max-width: 1920px;
   margin: 0 auto;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1340px) {
   .top-bar-fullwidth {
-    grid-template-columns: 260px 1fr 320px;
-    gap: 10px;
+    grid-template-columns: 310px 1fr 370px;
+    gap: 14px;
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1060px) {
   .top-bar-fullwidth {
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 14px;
   }
   .top-center-brand {
     grid-column: 1 / -1;
@@ -649,7 +649,7 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 @media (max-width: 680px) {
   .top-bar-fullwidth {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
   }
 }
 
@@ -662,12 +662,12 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 .nrsd-top-card, .filters-top-card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 9px 12px;
-  box-shadow: 0 1px 4px rgba(18, 38, 44, 0.05);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 6px rgba(18, 38, 44, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 9px;
   position: relative;
 }
 
@@ -675,32 +675,32 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 .nrsd-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .nrsd-badge-icon {
-  font-size: 18px;
+  font-size: 24px;
   background: var(--water-tint);
-  border-radius: 6px;
-  padding: 3px 6px;
+  border-radius: 8px;
+  padding: 5px 8px;
   line-height: 1;
 }
 .nrsd-card-title {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--water-deep);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .nrsd-card-subtitle {
-  margin: 1px 0 0;
-  font-size: 11px;
+  margin: 2px 0 0;
+  font-size: 12.5px;
   color: var(--muted);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .nrsd-inputs-stack {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .nrsd-search-field {
   position: relative;
@@ -709,38 +709,38 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 }
 .nrsd-input-icon {
   position: absolute;
-  left: 8px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 12px;
+  font-size: 14.5px;
   color: var(--muted);
   pointer-events: none;
   z-index: 1;
 }
 .nrsd-search-field input {
   width: 100%;
-  padding: 6px 26px 6px 26px;
+  padding: 8px 32px 8px 34px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   background: #fafcfc;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 7px;
   transition: border-color .15s, box-shadow .15s;
 }
 .nrsd-search-field input:focus {
   border-color: var(--water);
   background: #fff;
-  box-shadow: 0 0 0 2px rgba(14,90,110,.12);
+  box-shadow: 0 0 0 2.5px rgba(14,90,110,.14);
   outline: none;
 }
 .nrsd-clear-icon {
   position: absolute;
-  right: 7px;
+  right: 10px;
   color: var(--muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: bold;
-  padding: 2px 4px;
+  padding: 2px 5px;
   z-index: 2;
 }
 .nrsd-clear-icon:hover { color: var(--ink); }
@@ -749,24 +749,24 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 .top-center-brand {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 2px 4px;
+  gap: 8px;
+  padding: 2px 6px;
 }
 .brand-top-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 .brand-title-wrap {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 .brand-main-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.01em;
@@ -775,13 +775,13 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 .top-actions-compact {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .refresh-form-compact { margin: 0; }
 .refresh-btn-compact {
-  padding: 5px 14px;
+  padding: 7px 18px;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   color: #fff;
@@ -793,36 +793,36 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 }
 .refresh-btn-compact:hover {
   background: var(--water-deep);
-  box-shadow: 0 2px 6px rgba(14,90,110,.25);
+  box-shadow: 0 2px 8px rgba(14,90,110,.28);
   transform: translateY(-1px);
 }
 .refresh-btn-compact:disabled { opacity: .5; cursor: not-allowed; }
 .badge-bg-update-compact {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 99px;
   background: var(--water-tint);
   border: 1px solid rgba(14,90,110,.25);
   color: var(--water-deep);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .center-tabs-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .day-tabs.compact {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
   padding: 0;
 }
 .day-tabs.compact a {
-  padding: 4px 12px;
-  font-size: 12.5px;
+  padding: 6px 15px;
+  font-size: 13.5px;
   font-weight: 600;
   border-radius: 99px;
   text-decoration: none;
@@ -841,23 +841,23 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   border-bottom: none;
   padding: 0;
 }
 .periods.compact a {
-  padding: 3px 8px;
-  font-size: 12.5px;
+  padding: 5px 11px;
+  font-size: 13.5px;
   font-weight: 500;
   text-decoration: none;
   color: var(--muted);
   border-bottom: 2px solid transparent;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: color .12s, background .12s;
 }
 .periods.compact a:hover {
   color: var(--ink);
-  background: rgba(14,90,110,.05);
+  background: rgba(14,90,110,.06);
 }
 .periods.compact a.on {
   color: var(--water-deep);
@@ -867,12 +867,13 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 .name-tab-compact {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: #f0f4f5 !important;
   border: 1px solid var(--line) !important;
-  border-radius: 4px !important;
-  padding: 2px 7px !important;
-  font-size: 11.5px !important;
+  border-radius: 5px !important;
+  padding: 4px 10px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
   color: var(--ink) !important;
 }
 .name-tab-compact:hover {
@@ -882,35 +883,36 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 
 /* ---- COMPLETE TOP-RIGHT: Filter Panel (Image 2) ---- */
 .filters-top-card {
-  padding: 8px 12px;
+  padding: 12px 16px;
+  gap: 9px;
 }
 .filter-state-row {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 .filter-state-control {
   flex: 1;
-  min-width: 120px;
+  min-width: 140px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 .filter-state-control label, .filter-heading-label {
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
   color: var(--ink);
 }
 .filter-state-control select {
   width: 100%;
-  padding: 4px 8px;
+  padding: 6px 10px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--ink);
   background: #fafcfc;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 6px;
 }
 .filter-state-control select:focus {
   border-color: var(--water);
@@ -920,27 +922,27 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 .filter-actions-inline {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .filter-actions-inline .check {
-  font-size: 11px;
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   margin: 0;
   white-space: nowrap;
   cursor: pointer;
   color: var(--muted);
 }
 .btn-apply-state {
-  padding: 4px 10px;
+  padding: 6px 14px;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
   background: #0e5a6e;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background .12s;
   white-space: nowrap;
@@ -950,11 +952,11 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 .filter-row-section {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .filter-heading-label {
-  min-width: 48px;
-  font-size: 11px;
+  min-width: 58px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .03em;
   color: var(--muted);
@@ -966,20 +968,20 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 .pick-pills a {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  font-size: 11.5px;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12.5px;
   font-weight: 500;
   text-decoration: none;
   color: var(--ink);
   background: #f0f4f5;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 6px;
   transition: background .12s, border-color .12s;
 }
 .pick-pills a:hover { background: var(--water-tint); }
@@ -991,7 +993,7 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 }
 .pick-pills a.on span { color: #dcecf0; }
 .pick-pills a span {
-  font-size: 10.5px;
+  font-size: 11.5px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1006,17 +1008,17 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 4px;
+  gap: 5px;
   flex-wrap: wrap;
-  max-height: 42px;
+  max-height: 52px;
   overflow-y: auto;
 }
 .pick-chips a {
   display: inline-flex;
   align-items: baseline;
-  gap: 3px;
-  padding: 1.5px 6px;
-  font-size: 11px;
+  gap: 4px;
+  padding: 2.5px 8px;
+  font-size: 12px;
   text-decoration: none;
   color: var(--ink);
   background: #f4f7f8;
@@ -1034,7 +1036,7 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
 }
 .pick-chips a.on span, .pick-chips a.on .native, .pick-chips a.on .eng { color: #fff; }
 .pick-chips a span:last-child {
-  font-size: 9.5px;
+  font-size: 10.5px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1054,7 +1056,7 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   z-index: 1000;
 }
 .nrsd-item {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid #f0f3f4;
   cursor: pointer;
   transition: background .12s;
@@ -1070,7 +1072,7 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   gap: 8px;
 }
 .nrsd-item-name {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--ink);
 }
@@ -1078,42 +1080,42 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   background: #fff3bf;
   color: #7a5600;
   font-weight: bold;
-  padding: 0 1px;
+  padding: 0 2px;
   border-radius: 2px;
 }
 .nrsd-item-pic {
-  font-size: 10px;
-  padding: 1px 5px;
+  font-size: 11px;
+  padding: 2px 6px;
   background: #eef2f3;
   color: var(--muted);
   border-radius: 4px;
   font-family: monospace;
 }
 .nrsd-item-meta {
-  margin-top: 2px;
-  font-size: 11px;
+  margin-top: 3px;
+  font-size: 12px;
   color: var(--muted);
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 .nrsd-item-empty {
-  padding: 12px;
+  padding: 14px;
   text-align: center;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 /* District Dropdown Items */
 .nrsd-district-item {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid #f0f3f4;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
+  gap: 10px;
+  font-size: 14px;
   transition: background .12s;
 }
 .nrsd-district-item:last-child { border-bottom: none; }
