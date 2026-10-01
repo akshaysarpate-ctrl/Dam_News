@@ -73,24 +73,48 @@
           </div>
         </div>
 
-        <!-- Quick Day Tabs & Period Range Tabs -->
-        <div class="center-tabs-row">
-          <nav class="day-tabs compact" aria-label="Quick day view">
-            {% for key, dt in DAY_TABS.items() %}
-              {% set active = (f.day == key and not view.custom and not f.start) %}
-              <a href="{{ qs(day=key, period=None, start=None, end=None) }}" class="{{ 'on' if active }}"
-                 {% if active %}aria-current="true"{% endif %}>{{ dt.label }}</a>
-            {% endfor %}
-          </nav>
-          <nav class="periods compact" aria-label="Time period">
-            {% for key, p in PERIODS.items() %}
-              {% set active = (key == f.period and not view.custom and not f.day) %}
-              <a href="{{ qs(period=key, day=None, start=None, end=None) }}" class="{{ 'on' if active }}"
-                 {% if active %}aria-current="true"{% endif %}>{{ p.label }}</a>
-            {% endfor %}
-            <a href="#custom-range-section" id="tab-custom-dates" class="{{ 'on' if view.custom }}" {% if view.custom %}aria-current="true"{% endif %} title="Select custom dates and search the internet">Custom dates</a>
-            <a href="{{ url_for('search_name') }}" class="name-tab-compact">&#x1F50D; Name search</a>
-          </nav>
+        <!-- User-Friendly, Prominent Tab Navigation Deck -->
+        <div class="tabs-deck-container">
+          <!-- Row 1: Daily Quick Views & Name Search -->
+          <div class="tabs-subgroup-row">
+            <span class="tabs-category-tag">Daily Feed</span>
+            <nav class="day-tabs enhanced-tabs" aria-label="Quick day view">
+              {% for key, dt in DAY_TABS.items() %}
+                {% set active = (f.day == key and not view.custom and not f.start) %}
+                <a href="{{ qs(day=key, period=None, start=None, end=None) }}" 
+                   class="tab-btn-pill {{ 'on active' if active }}"
+                   {% if active %}aria-current="true"{% endif %}>
+                  {% if key == 'today' %}<span class="tab-glyph">⚡</span>{% elif key == 'yesterday' %}<span class="tab-glyph">⏮</span>{% else %}<span class="tab-glyph">🗓</span>{% endif %}
+                  {{ dt.label }}
+                </a>
+              {% endfor %}
+            </nav>
+            <span class="tab-group-sep">|</span>
+            <a href="{{ url_for('search_name') }}" class="tab-btn-pill tab-btn-search" title="Search all 6,800+ dams and keywords across newspapers">
+              <span class="tab-glyph">🔍</span> Search by Dam Name
+            </a>
+          </div>
+
+          <!-- Row 2: Historical Range & Custom Date Search -->
+          <div class="tabs-subgroup-row">
+            <span class="tabs-category-tag">Historical</span>
+            <nav class="periods enhanced-tabs" aria-label="Time period">
+              {% for key, p in PERIODS.items() %}
+                {% set active = (key == f.period and not view.custom and not f.day) %}
+                <a href="{{ qs(period=key, day=None, start=None, end=None) }}" 
+                   class="tab-btn-pill {{ 'on active' if active }}"
+                   {% if active %}aria-current="true"{% endif %}>
+                  {{ p.label }}
+                </a>
+              {% endfor %}
+              <a href="#custom-range-section" id="tab-custom-dates" 
+                 class="tab-btn-pill tab-btn-custom {{ 'on active' if view.custom }}" 
+                 {% if view.custom %}aria-current="true"{% endif %} 
+                 title="Select custom date range and search the internet">
+                <span class="tab-glyph">📅</span> Custom dates
+              </a>
+            </nav>
+          </div>
         </div>
       </div>
 
@@ -435,9 +459,12 @@
           customTab.classList.add('on');
           customTab.setAttribute('aria-current', 'true');
           // Remove active state from other tabs while custom panel is open
-          document.querySelectorAll('.day-tabs a, .periods a:not(#tab-custom-dates)').forEach(function (a) {
-            a.classList.remove('on');
-            a.removeAttribute('aria-current');
+          document.querySelectorAll('.day-tabs a, .periods a, .tab-btn-pill:not(#tab-custom-dates)').forEach(function (a) {
+            if (a.id !== 'tab-custom-dates') {
+              a.classList.remove('on');
+              a.classList.remove('active');
+              a.removeAttribute('aria-current');
+            }
           });
           var startInput = document.getElementById('startDateInput');
           if (startInput) startInput.focus();
