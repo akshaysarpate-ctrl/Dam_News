@@ -36,41 +36,36 @@ def get(url, params=None, retries=3, timeout=30, sleep=(1.0, 2.0)):
 
 
 def resolve_via_bing_news(title: str, source: str = "") -> str:
-    """Find the exact direct publisher article URL using Bing News."""
+    """Find the exact direct publisher article URL using Bing News without external parser dependencies."""
     if not title:
         return ""
+    import re
     import urllib.parse
-    from selectolax.parser import HTMLParser
+
+    excluded = ("bing.com", "msn.com", "microsoft.com", "google.com", "w3.org", "schema.org")
+
+    def _extract_link(query_str: str) -> str:
+        u = f"https://www.bing.com/news/search?q={urllib.parse.quote(query_str)}"
+        try:
+            res = requests.get(u, headers=HEADERS, timeout=4)
+            if res.status_code == 200:
+                matches = re.findall(r'href=["\'](https?://[^"\'\s>]+)["\']', res.text)
+                for h in matches:
+                    if not any(d in h for d in excluded):
+                        return h
+        except Exception:
+            pass
+        return ""
 
     q = f'"{title}"'
     if source and source.lower() not in ("unknown source", "google news"):
         q += f" {source}"
-    url = f"https://www.bing.com/news/search?q={urllib.parse.quote(q)}"
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=4)
-        if r.status_code == 200:
-            tree = HTMLParser(r.text)
-            for a in tree.css('a.title, div.news-card a, a[href^="http"]'):
-                href = a.attributes.get("href", "")
-                if href.startswith("http") and not any(d in href for d in ("bing.com", "msn.com", "microsoft.com", "google.com")):
-                    return href
-    except Exception:
-        pass
+    result = _extract_link(q)
+    if result:
+        return result
 
-    # Try without quotes if exact quote didn't match
     q2 = f"{title} {source}".strip()
-    url2 = f"https://www.bing.com/news/search?q={urllib.parse.quote(q2)}"
-    try:
-        r = requests.get(url2, headers=HEADERS, timeout=4)
-        if r.status_code == 200:
-            tree = HTMLParser(r.text)
-            for a in tree.css('a.title, div.news-card a, a[href^="http"]'):
-                href = a.attributes.get("href", "")
-                if href.startswith("http") and not any(d in href for d in ("bing.com", "msn.com", "microsoft.com", "google.com")):
-                    return href
-    except Exception:
-        pass
-    return ""
+    return _extract_link(q2)
 
 
 def resolve_news_url(url: str, title: str = "", source: str = "") -> str:
