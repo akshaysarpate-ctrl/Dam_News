@@ -1,0 +1,27 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    # Runs every 12 minutes to keep the Render free tier instance awake (Render spins down after 15 min of inactivity)
+    - cron: '*/12 * * * *'
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions tab anytime
+
+jobs:
+  ping-render:
+    name: Ping Render Web Service
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping Keep-Alive Endpoint
+        run: |
+          echo "Sending keep-alive ping to dam-news-2.onrender.com..."
+          RESPONSE=$(curl -s -L -w "\nHTTP_STATUS:%{http_code}\nTIME_TOTAL:%{time_total}s\n" https://dam-news-2.onrender.com/health)
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d: -f2)
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "SUCCESS: Render instance is awake and healthy (HTTP $STATUS)!"
+          else
+            echo "Status $STATUS received. Pinging fallback root URL..."
+            curl -s -L -w "\nFALLBACK_STATUS:%{http_code}\n" https://dam-news-2.onrender.com/ || true
+          fi

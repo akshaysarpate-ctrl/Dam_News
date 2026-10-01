@@ -337,6 +337,16 @@ def helpers():
 
 
 # ---------------------------------------------------------------- routes
+@app.route("/health")
+def health():
+    """Ultra-fast, zero-database health check endpoint for keep-alive monitoring."""
+    return jsonify({
+        "status": "ok",
+        "app": "dam-news",
+        "time": datetime.now(timezone.utc).isoformat(),
+    })
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     f = parse_filters()
