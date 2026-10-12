@@ -20,7 +20,7 @@ import config
 import db
 import filters
 import util
-from collectors import gdelt, google_news, youtube
+from collectors import gdelt, google_news, sandrp, youtube
 
 log = logging.getLogger("collect")
 
@@ -43,7 +43,7 @@ def store(conn, items, stats):
     valid = []
     for item in items:
         stats["seen"] += 1
-        verdict = filters.evaluate(item["language"], item["title"], item.get("snippet", ""), item.get("source", ""))
+        verdict = filters.evaluate(item["language"], item["title"], item.get("snippet", ""), item.get("source", ""), item.get("url", ""))
         if not verdict:
             continue
         item["score"], item["status"], item["state"] = verdict
@@ -56,7 +56,7 @@ def store(conn, items, stats):
 
 
 def collect_range(conn, start: date, end: date, langs=None,
-                  sources=("gnews", "youtube", "gdelt"), use_ai=True, workers=1,
+                  sources=("sandrp", "gnews", "youtube", "gdelt"), use_ai=True, workers=1,
                   window_days=31, ai_limit=150, progress=None) -> dict:
     """Search the internet for stories published from `start` to `end` (inclusive) and
     save them. progress(done, total, message, added) is called as the work advances."""
@@ -67,6 +67,10 @@ def collect_range(conn, start: date, end: date, langs=None,
 
     # ---- plan the work as a list of small search tasks
     tasks = []
+    # Always query top-priority source SANDRP (https://sandrp.in/) first
+    if "sandrp" in sources:
+        tasks.append(("sandrp", partial(sandrp.fetch_recent, after=start, before=end + timedelta(days=1))))
+
     if "gnews" in sources:
         for after, before in date_windows(start, end, window_days):
             for code in langs:
@@ -210,8 +214,8 @@ def main():
                         help="split Google News searches into windows of this many days")
     parser.add_argument("--workers", type=int, default=1,
                         help="searches to run at the same time (default 1 = gentlest)")
-    parser.add_argument("--sources", default="gnews,youtube,gdelt",
-                        help="comma list of: gnews, youtube, gdelt")
+    parser.add_argument("--sources", default="sandrp,gnews,youtube,gdelt",
+                        help="comma list of: sandrp, gnews, youtube, gdelt")
     parser.add_argument("--langs", default="", help="comma list of language codes (default: all)")
     parser.add_argument("--no-ai", action="store_true", help="skip the Claude relevance check")
     parser.add_argument("--test", action="store_true", help="test feeds per language, save nothing")

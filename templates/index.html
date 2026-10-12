@@ -315,12 +315,16 @@
       {% if rows %}
         <ul class="results">
           {% for a in rows %}
-            <li class="item">
+            {% set is_sandrp = ('sandrp.in' in (a.url|lower) or 'sandrp' in (a.source|lower)) %}
+            <li class="item {% if is_sandrp %}priority-item{% endif %}">
               <div class="body">
                 <a class="headline" lang="{{ a.language if a.language != 'und' else '' }}"
                    href="{{ a.url }}"
                    target="_blank" rel="noopener noreferrer">{{ a.title }}</a>
                 <div class="meta">
+                  {% if is_sandrp %}
+                    <span class="chip priority-chip" title="Top Priority Verified Watchdog Source: South Asia Network on Dams, Rivers and People (https://sandrp.in/)">⭐ Priority Source: SANDRP</span>
+                  {% endif %}
                   <span class="src">{{ a.source or 'Unknown source' }}</span>
                   <time datetime="{{ a.published_at }}">{{ a.published_at|ist_date }}, {{ a.published_at|ago }}</time>
                   <span class="chip">{{ a.language|lang_name }}</span>

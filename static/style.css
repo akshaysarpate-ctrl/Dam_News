@@ -216,6 +216,18 @@ a { color: var(--water); }
   border-color: rgba(14, 90, 110, 0.4);
 }
 
+.item.priority-item {
+  border: 1.5px solid #0284c7;
+  box-shadow: 0 3px 12px rgba(2, 132, 199, 0.12);
+  background: linear-gradient(180deg, #f0f9ff 0%, var(--surface) 48px);
+}
+
+.item.priority-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.22);
+  border-color: #0369a1;
+}
+
 .thumb {
   order: -1;
   display: block;
@@ -313,6 +325,17 @@ a { color: var(--water); }
 .chip.maybe {
   background: var(--maybe-tint);
   color: var(--maybe);
+}
+
+.chip.priority-chip {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(2, 132, 199, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .dam {

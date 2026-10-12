@@ -14,10 +14,10 @@ AI_PATTERNS = [
     r"\bai\b",
     r"\bai[- ]generated\b",
     r"\bai[- ]animation\b",
-    r"\bai\s*(pics?|photos?|images?|तस्वीर|तस्वीरें|चित्र|video|वीडियो)",
+    r"\bai\s*(pics?|photos?|images?|तस्वीर|तस्वीरें|चित्र|video|वीडियो|story|stories)",
     r"\bartificial intelligence\b",
     r"आर्टिफिशियल इंटेलिजेंस",
-    # Computer graphics & simulation
+    # Computer graphics & simulation & gaming & animation
     r"\bcgi\b",
     r"\bsimulation\b",
     r"\bsimulator\b",
@@ -32,6 +32,14 @@ AI_PATTERNS = [
     r"\bunreal engine\b",
     r"\bblender\b",
     r"\b3d animation\b",
+    r"\b2d\s*(hindi\s*)?story\b",
+    r"\b2d animation\b",
+    r"\blego\b",
+    r"\bminecraft\b",
+    r"\broblox\b",
+    r"\bgta\b",
+    r"\bbeamng\b",
+    r"\bteardown\b",
     # Hypothetical fiction / what if
     r"\bhypothetical\b",
     r"\bwhat if\b",
@@ -43,6 +51,18 @@ AI_PATTERNS = [
     r"\btoon\b",
     r"कहानी",
     r"\bkahani\b",
+    r"\bkahaniyan\b",
+    # Music / Bhajans / Songs matching "dam" / "damru" / "khatu dam"
+    r"\bdam\s*dam\s*damru\b",
+    r"\bdamru\b",
+    r"\bbhajan\b",
+    r"\baarti\b",
+    r"\bvisarjan\b",
+    r"\bkhatu\s*(sham|dham|dam)\b",
+    r"\bdj\s*song\b",
+    r"\bdj\s*bhajan\b",
+    r"\bnavratri\b",
+    r"\bbhakti\b",
 ]
 
 ai_combined_re = re.compile("|".join(AI_PATTERNS), re.IGNORECASE)
@@ -57,18 +77,40 @@ AI_SOURCE_PATTERNS = [
     r"\banimation\b",
     r"\bsimulator\b",
     r"\bsimulation\b",
+    r"\bkahani\b",
+    r"\bkahaniyan\b",
+    r"\bghibli\b",
+    r"\bgiant adventures\b",
+    r"\bshadowframe\b",
+    r"\bcosmic minds\b",
+    r"\bechoes unveiled\b",
+    r"\bfactnova\b",
+    r"\blegacydailypay\b",
+    r"\bdear humans\b",
+    r"\borganic promotions\b",
+    r"\bbeyond the limits\b",
+    r"\bfantastic architecture\b",
+    r"\bmurphy's law files\b",
+    r"\bhistoraxp\b",
+    r"\btidal bricks\b",
+    r"\bbhajan\b",
+    r"\bdivine\b",
+    r"\bblueprint decay\b",
 ]
 ai_source_re = re.compile("|".join(AI_SOURCE_PATTERNS), re.IGNORECASE)
 
-rows = c.execute("SELECT id, kind, title, snippet, source FROM articles").fetchall()
+rows = c.execute("SELECT id, kind, title, snippet, source, url FROM articles").fetchall()
 to_delete = []
 
 for r in rows:
-    aid, kind, title, snippet, source = r
+    aid, kind, title, snippet, source, url = r
+    # Skip verified institutional news publishers
+    if "projectstoday.com" in (url or "").lower() or "sandrp.in" in (url or "").lower():
+        continue
+
     text = f"{title} {snippet}".lower()
-    src = source.lower()
+    src = (source or "").lower()
     
-    # Check text for AI/simulation/cartoon
     m_text = ai_combined_re.search(text)
     m_src = ai_source_re.search(src)
     
@@ -77,7 +119,7 @@ for r in rows:
         to_delete.append((aid, title, source, reason))
 
 print(f"Total articles scanned: {len(rows)}")
-print(f"Total AI/synthetic/cartoon items identified: {len(to_delete)}")
+print(f"Total AI/synthetic/cartoon/noise items identified: {len(to_delete)}")
 
 for item in to_delete:
     t = item[1].encode('ascii', 'replace').decode()

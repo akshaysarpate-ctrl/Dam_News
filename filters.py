@@ -77,11 +77,12 @@ INDIAN_RIVERS = [
 _INDIAN_RIVERS_RE = re.compile(r"\b(" + "|".join(re.escape(r) for r in INDIAN_RIVERS) + r")\b", re.IGNORECASE)
 
 # AI & Synthetic / Simulation / Fictional Content Patterns
+# AI & Synthetic / Simulation / Fictional Content Patterns
 AI_PATTERNS = [
     r"\bai\b",
     r"\bai[- ]generated\b",
     r"\bai[- ]animation\b",
-    r"\bai\s*(pics?|photos?|images?|तस्वीर|तस्वीरें|चित्र|video|वीडियो)",
+    r"\bai\s*(pics?|photos?|images?|तस्वीर|तस्वीरें|चित्र|video|वीडियो|story|stories)",
     r"\bartificial intelligence\b",
     r"आर्टिफिशियल इंटेलिजेंस",
     r"\bcgi\b",
@@ -98,6 +99,14 @@ AI_PATTERNS = [
     r"\bunreal engine\b",
     r"\bblender\b",
     r"\b3d animation\b",
+    r"\b2d\s*(hindi\s*)?story\b",
+    r"\b2d animation\b",
+    r"\blego\b",
+    r"\bminecraft\b",
+    r"\broblox\b",
+    r"\bgta\b",
+    r"\bbeamng\b",
+    r"\bteardown\b",
     r"\bhypothetical\b",
     r"\bwhat if\b",
     r"क्या होगा अगर",
@@ -107,6 +116,17 @@ AI_PATTERNS = [
     r"\btoon\b",
     r"कहानी",
     r"\bkahani\b",
+    r"\bkahaniyan\b",
+    r"\bdam\s*dam\s*damru\b",
+    r"\bdamru\b",
+    r"\bbhajan\b",
+    r"\baarti\b",
+    r"\bvisarjan\b",
+    r"\bkhatu\s*(sham|dham|dam)\b",
+    r"\bdj\s*song\b",
+    r"\bdj\s*bhajan\b",
+    r"\bnavratri\b",
+    r"\bbhakti\b",
 ]
 _AI_SYNTHETIC_RE = re.compile("|".join(AI_PATTERNS), re.IGNORECASE)
 
@@ -119,6 +139,25 @@ AI_SOURCE_PATTERNS = [
     r"\banimation\b",
     r"\bsimulator\b",
     r"\bsimulation\b",
+    r"\bkahani\b",
+    r"\bkahaniyan\b",
+    r"\bghibli\b",
+    r"\bgiant adventures\b",
+    r"\bshadowframe\b",
+    r"\bcosmic minds\b",
+    r"\bechoes unveiled\b",
+    r"\bfactnova\b",
+    r"\blegacydailypay\b",
+    r"\bdear humans\b",
+    r"\borganic promotions\b",
+    r"\bbeyond the limits\b",
+    r"\bfantastic architecture\b",
+    r"\bmurphy's law files\b",
+    r"\bhistoraxp\b",
+    r"\btidal bricks\b",
+    r"\bbhajan\b",
+    r"\bdivine\b",
+    r"\bblueprint decay\b",
 ]
 _AI_SOURCE_RE = re.compile("|".join(AI_SOURCE_PATTERNS), re.IGNORECASE)
 
@@ -168,18 +207,28 @@ def detect_state(text: str) -> str:
     return next(s for s in INDIAN_STATES if s.lower() == found)
 
 
-def evaluate(lang: str, title: str, snippet: str = "", source: str = ""):
+def evaluate(lang: str, title: str, snippet: str = "", source: str = "", url: str = ""):
     """Return (score, status, state) or None if the item should be dropped.
 
     Strict Policies:
     - 0% AI content: No AI-generated videos, articles, CGI, simulations, or fiction.
     - India only: Only authentic Indian dams and India-related dam news.
+    - Top Priority Source: https://sandrp.in/ (South Asia Network on Dams, Rivers and People)
+      always receives priority scoring and guaranteed acceptance for dam/river/water issues.
     """
     text = nfkc(f"{title} {snippet}")
 
     # 0. Reject AI-generated, synthetic, CGI, simulation, and cartoon content immediately
     if _AI_SYNTHETIC_RE.search(text) or (source and _AI_SOURCE_RE.search(source)):
         return None
+
+    # Check if this is from priority watchdog site SANDRP (https://sandrp.in/)
+    is_sandrp = (
+        "sandrp.in" in (url or "").lower()
+        or "sandrp" in (source or "").lower()
+        or "sandrp.in" in text
+        or "south asia network on dams, rivers and people" in text
+    )
 
     # 1. Reject explicit foreign dams immediately
     if _FOREIGN_DAM_RE.search(text):
@@ -189,11 +238,11 @@ def evaluate(lang: str, title: str, snippet: str = "", source: str = ""):
     has_city = bool(_INDIAN_CITIES_RE.search(text))
     has_river = bool(_INDIAN_RIVERS_RE.search(text))
     has_india = bool(_INDIA_RE.search(text))
-    has_indian_anchor = bool(state or has_city or has_river or has_india)
+    has_indian_anchor = bool(state or has_city or has_river or has_india) or is_sandrp
 
     # 2. Reject foreign countries unless there is a strong Indian location/dam
     fc_match = _FOREIGN_COUNTRY_RE.search(text)
-    if fc_match:
+    if fc_match and not is_sandrp:
         if not (state or (has_city and has_india)):
             return None
         # Discard foreign dam disaster articles that happen to mention India in passing
@@ -204,6 +253,21 @@ def evaluate(lang: str, title: str, snippet: str = "", source: str = ""):
     # 3. For English articles: must have at least one genuine Indian anchor
     if lang == "en" and not has_indian_anchor:
         return None
+
+    # Priority acceptance and scoring for SANDRP
+    if is_sandrp:
+        # SANDRP is dedicated to Indian dams, rivers, and water resources
+        water_watchdog_terms = (
+            "dam", "reservoir", "barrage", "bund", "river", "flood", "water",
+            "embankment", "safety", "spillway", "canal", "breach", "burst",
+            "monsoon", "drainage", "hydro", "basin", "ndsa", "cwc", "kumbh",
+            "pollution", "drought", "weir", "gate", "collapse", "overflow"
+        )
+        if any(w in text for w in water_watchdog_terms):
+            score = 90
+            if any(w in text for w in ("breach", "burst", "collaps", "fail", "leak", "crack", "flood", "disaster", "seepage", "hazard", "safety")):
+                score = 100
+            return score, "relevant", state
 
     # 4. Dam & Failure term matching
     dam, fail, strong = _matchers(lang)

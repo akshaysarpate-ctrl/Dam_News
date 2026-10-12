@@ -26,6 +26,13 @@ MAX_RANGE_DAYS = 366
 # Track the last article id seen per search so we can stream newly found articles
 _live_last_id = 0
 
+# Ordering clause: Always give top priority to SANDRP (https://sandrp.in/), then order by published_at DESC
+ORDER_PRIORITY_CLAUSE = (
+    "CASE "
+    "WHEN (url LIKE '%sandrp.in%' OR source LIKE '%SANDRP%' OR source LIKE '%sandrp%') THEN 1 "
+    "ELSE 0 END DESC, published_at DESC"
+)
+
 DAY_TABS = {
     "today":     {"label": "Today",               "offset": 0},
     "yesterday": {"label": "Yesterday",           "offset": 1},
@@ -382,7 +389,7 @@ def index():
 
     total = conn.execute(f"SELECT COUNT(*) FROM articles WHERE {where}", params).fetchone()[0]
     rows = conn.execute(
-        f"SELECT * FROM articles WHERE {where} ORDER BY published_at DESC LIMIT ? OFFSET ?",
+        f"SELECT * FROM articles WHERE {where} ORDER BY {ORDER_PRIORITY_CLAUSE} LIMIT ? OFFSET ?",
         params + [PAGE_SIZE, (f["page"] - 1) * PAGE_SIZE]).fetchall()
 
     w, p = build_where(f, view, skip={"lang"})
@@ -439,7 +446,7 @@ def search_web():
     langs = [c for c in request.form.getlist("search_langs") if c in config.LANGUAGES]
     if not langs:
         return redirect(url_for("index", start=start.isoformat(), end=end.isoformat(), notice="nolangs"))
-    sources = ["gnews", "gdelt"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
+    sources = ["sandrp", "gnews", "gdelt"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}
@@ -452,11 +459,11 @@ def search_web():
 
 @app.route("/refresh", methods=["GET", "POST"])
 def refresh():
-    """One-click refresh: fast search of the last 3 days across all Indian languages via Google News."""
+    """One-click refresh: fast search of the last 3 days across all Indian languages via Google News and SANDRP."""
     end = today()
     start = end - timedelta(days=2)
     langs = list(config.LANGUAGES)
-    sources = ["gnews"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
+    sources = ["sandrp", "gnews"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}
@@ -509,7 +516,7 @@ def search_name():
 
         total = conn.execute(f"SELECT COUNT(*) FROM articles WHERE {where}", params).fetchone()[0]
         rows = conn.execute(
-            f"SELECT * FROM articles WHERE {where} ORDER BY published_at DESC LIMIT ? OFFSET ?",
+            f"SELECT * FROM articles WHERE {where} ORDER BY {ORDER_PRIORITY_CLAUSE} LIMIT ? OFFSET ?",
             params + [PAGE_SIZE, (page - 1) * PAGE_SIZE]).fetchall()
 
         # Sidebar facets — use base query (name + status only, no lang/state/kind filters)
@@ -794,7 +801,7 @@ def export_csv():
     view = view_window(f)
     conn = db.connect()
     where, params = build_where(f, view)
-    rows = conn.execute(f"SELECT * FROM articles WHERE {where} ORDER BY published_at DESC",
+    rows = conn.execute(f"SELECT * FROM articles WHERE {where} ORDER BY {ORDER_PRIORITY_CLAUSE}",
                         params).fetchall()
     conn.close()
     out = io.StringIO()

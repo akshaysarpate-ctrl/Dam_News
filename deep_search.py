@@ -8,7 +8,7 @@ import config
 import db
 import filters
 import util
-from collectors import google_news
+from collectors import google_news, sandrp
 
 log = logging.getLogger("deep_search")
 
@@ -21,16 +21,16 @@ REGIONAL_DAM_TERMS = {
     "ta": ["அணை", "தடுப்பணை", "ஏரி"],
     "te": ["డ్యామ్", "ప్రాజెక్టు", "ఆనకట్ట", "రిజర్వాయర్"],
     "kn": ["ಅಣೆಕಟ್ಟು", "ಡ್ಯಾಂ", "ಜಲಾಶಯ"],
-    "ml": ["ഡാം", "അണക്കെട്ട്"],
+    "ml": ["ഡാം", "അணക്കെട്ട്"],
     "or": ["ବନ୍ଧ", "ଡ୍ୟାମ", "ଜଳଭଣ୍ଡାର"],
     "pa": ["ਡੈਮ", "ਬੰਨ੍ਹ"],
     "ur": ["ڈیم", "بیراج"],
     "as": ["বান্ধ", "ডেম"],
 }
 
-# Major newspaper domains in India to ensure deep newspaper crawling
+# Major newspaper & watchdog domains in India (sandrp.in is given top priority)
 NEWSPAPER_DOMAINS = [
-    "thehindu.com", "timesofindia.indiatimes.com", "indianexpress.com",
+    "sandrp.in", "thehindu.com", "timesofindia.indiatimes.com", "indianexpress.com",
     "hindustantimes.com", "deccanherald.com", "telegraphindia.com",
     "tribuneindia.com", "amarujala.com", "jagran.com", "bhaskar.com",
     "lokmat.com", "esakal.com", "eenadu.net", "sakshi.com", "dinamalar.com",
@@ -68,9 +68,11 @@ def build_deep_newspaper_queries(raw_name: str) -> list[tuple[str, dict, str]]:
     is_generic = base_name.lower() in GENERIC_TERMS
     tasks = []
 
-    # 1. English - Core queries + Newspaper coverage
+    # 1. English - Priority SANDRP watchdog queries + Core newspaper coverage
     en_cfg = config.LANGUAGES.get("en", {})
     if en_cfg:
+        # Priority queries targeting sandrp.in
+        tasks.append(("en", en_cfg, f'"{base_name}" site:sandrp.in'))
         if is_generic:
             tasks.append(("en", en_cfg, f'"{base_name}" dam'))
             tasks.append(("en", en_cfg, f'"{base_name}" dam failure breach collapse'))
@@ -136,6 +138,16 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
             return code, q, []
 
     all_fetched = []
+
+    # Priority 1: Query SANDRP (https://sandrp.in/) native feeds directly for this dam
+    try:
+        sandrp_items = sandrp.fetch_for_dam(base_name)
+        stats["items_seen"] += len(sandrp_items)
+        all_fetched.extend(sandrp_items)
+    except Exception as e:
+        log.warning("SANDRP direct fetch failed for %r: %s", base_name, e)
+
+    # Priority 2: Concurrent multi-newspaper queries
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futs = [pool.submit(fetch_one, t) for t in queries]
         for f in as_completed(futs):
@@ -158,13 +170,21 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
     for item in all_fetched:
         title = item.get("title", "")
         snippet = item.get("snippet", "")
+        url = item.get("url", "")
+        source = item.get("source", "")
         text = f"{title} {snippet}".lower()
+        is_sandrp_item = ("sandrp.in" in url.lower()) or ("sandrp" in source.lower())
 
         # Check if the name or dam terms match
-        verdict = filters.evaluate(item["language"], title, snippet, item.get("source", ""))
+        verdict = filters.evaluate(item["language"], title, snippet, source, url)
         
         if verdict:
             item["score"], item["status"], item["state"] = verdict
+        elif is_sandrp_item:
+            state = filters.detect_state(f"{title} {snippet}")
+            item["score"] = 95
+            item["status"] = "relevant"
+            item["state"] = state
         elif base_lower in text and any(w in text for w in WATER_TERMS):
             if filters._AI_SYNTHETIC_RE.search(text) or (item.get("source") and filters._AI_SOURCE_RE.search(item["source"])):
                 continue
@@ -179,6 +199,10 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
             item["state"] = state
         else:
             continue
+
+        if is_sandrp_item:
+            item["score"] = max(item.get("score", 0), 95)
+            item["status"] = "relevant"
 
         if not is_generic:
             if base_lower in text:
