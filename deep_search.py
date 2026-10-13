@@ -64,9 +64,13 @@ def build_deep_newspaper_queries(raw_name: str) -> list[tuple[str, dict, str]]:
     """Build high-yield, focused search queries across national and regional newspapers.
     Returns list of (lang_code, lang_cfg, query_string).
     """
+    import multilingual_search
     base_name, clean_name = clean_search_name(raw_name)
     is_generic = base_name.lower() in GENERIC_TERMS
     tasks = []
+
+    # Convert English search term into all 12 supported Indian language scripts
+    converted = multilingual_search.convert_name_to_all_languages(raw_name)
 
     # 1. English - Priority SANDRP watchdog queries + Core newspaper coverage
     en_cfg = config.LANGUAGES.get("en", {})
@@ -83,24 +87,45 @@ def build_deep_newspaper_queries(raw_name: str) -> list[tuple[str, dict, str]]:
             tasks.append(("en", en_cfg, f'"{base_name}" reservoir OR barrage OR "water level" OR gates'))
             tasks.append(("en", en_cfg, f'"{base_name}" dam site:thehindu.com OR site:timesofindia.indiatimes.com OR site:indianexpress.com'))
 
-    # 2. Regional Languages - 1 top query per regional language
+    # 2. Regional Languages - Uses converted native script for each language
     for code, cfg in config.LANGUAGES.items():
         if code == "en":
             continue
         terms = REGIONAL_DAM_TERMS.get(code, [])
+        native_variants = converted.get(code, [base_name])
+        native_word = native_variants[0] if native_variants else base_name
         if terms:
-            tasks.append((code, cfg, f'{base_name} {terms[0]}'))
+            tasks.append((code, cfg, f'{native_word} {terms[0]}'))
+            if not is_generic:
+                tasks.append((code, cfg, f'"{native_word}"'))
 
-    # 3. Dedicated incident queries for major regional languages
+    # 3. Dedicated incident queries for major regional languages using native script
+    hi_name = converted.get("hi", [base_name])[0]
     hi_cfg = config.LANGUAGES.get("hi")
     if hi_cfg:
-        tasks.append(("hi", hi_cfg, f'"{base_name}" बांध दरार OR रिसाव OR बाढ़'))
+        tasks.append(("hi", hi_cfg, f'"{hi_name}" बांध दरार OR रिसाव OR बाढ़'))
+        tasks.append(("hi", hi_cfg, f'"{hi_name}" बांध'))
+
+    mr_name = converted.get("mr", [base_name])[0]
     mr_cfg = config.LANGUAGES.get("mr")
     if mr_cfg:
-        tasks.append(("mr", mr_cfg, f'"{base_name}" धरण पाणी OR पूर'))
+        tasks.append(("mr", mr_cfg, f'"{mr_name}" धरण पाणी OR पूर'))
+        tasks.append(("mr", mr_cfg, f'"{mr_name}" धरण'))
+
+    te_name = converted.get("te", [base_name])[0]
     te_cfg = config.LANGUAGES.get("te")
     if te_cfg:
-        tasks.append(("te", te_cfg, f'"{base_name}" డ్యామ్ గేట్లు OR ముంపు'))
+        tasks.append(("te", te_cfg, f'"{te_name}" డ్యామ్ గేట్లు OR ముంపు'))
+
+    ta_name = converted.get("ta", [base_name])[0]
+    ta_cfg = config.LANGUAGES.get("ta")
+    if ta_cfg:
+        tasks.append(("ta", ta_cfg, f'"{ta_name}" அணை'))
+
+    gu_name = converted.get("gu", [base_name])[0]
+    gu_cfg = config.LANGUAGES.get("gu")
+    if gu_cfg:
+        tasks.append(("gu", gu_cfg, f'"{gu_name}" ડેમ'))
 
     return tasks
 
@@ -166,6 +191,9 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
         "inundat", "submerg", "leak", "crack", "seepage", "alert", "disaster"
     )
 
+    import multilingual_search
+    converted = multilingual_search.convert_name_to_all_languages(raw_name)
+
     valid_items = []
     for item in all_fetched:
         title = item.get("title", "")
@@ -175,23 +203,27 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
         text = f"{title} {snippet}".lower()
         is_sandrp_item = ("sandrp.in" in url.lower()) or ("sandrp" in source.lower())
 
-        # Check if the name or dam terms match
+        if filters._AI_SYNTHETIC_RE.search(text) or (item.get("source") and filters._AI_SOURCE_RE.search(item["source"])):
+            continue
+
+        # Check if the text matches converted name by at least 75%
+        score_pct, is_75_match, matched_term = multilingual_search.calculate_75_match(converted, f"{title} {snippet}")
+
         verdict = filters.evaluate(item["language"], title, snippet, source, url)
-        
-        if verdict:
-            item["score"], item["status"], item["state"] = verdict
+
+        if is_75_match:
+            state = filters.detect_state(f"{title} {snippet}")
+            item["score"] = max(item.get("score", 0), int(score_pct))
+            item["status"] = "relevant"
+            item["state"] = state
+            item["dam_name"] = clean_name.title()
         elif is_sandrp_item:
             state = filters.detect_state(f"{title} {snippet}")
             item["score"] = 95
             item["status"] = "relevant"
             item["state"] = state
-        elif base_lower in text and any(w in text for w in WATER_TERMS):
-            if filters._AI_SYNTHETIC_RE.search(text) or (item.get("source") and filters._AI_SOURCE_RE.search(item["source"])):
-                continue
-            state = filters.detect_state(f"{title} {snippet}")
-            item["score"] = 60
-            item["status"] = "relevant"
-            item["state"] = state
+        elif verdict:
+            item["score"], item["status"], item["state"] = verdict
         elif is_generic and any(w in text for w in ("dam", "reservoir", "barrage")):
             state = filters.detect_state(f"{title} {snippet}")
             item["score"] = 50
@@ -204,7 +236,7 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
             item["score"] = max(item.get("score", 0), 95)
             item["status"] = "relevant"
 
-        if not is_generic:
+        if not is_generic and not item.get("dam_name"):
             if base_lower in text:
                 item["dam_name"] = base_name.title()
             elif "dam" in text:

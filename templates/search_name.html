@@ -67,6 +67,22 @@
   {% endif %}
 
   {% if name %}
+    {% if converted_summary %}
+      <div class="multilingual-search-banner" role="region" aria-label="Multilingual conversion">
+        <div class="msb-header">
+          <span class="msb-icon">🌐</span>
+          <span class="msb-title"><strong>Multilingual Match Active:</strong> Converted "{{ name }}" into all regional languages (≥75% similarity matching applied)</span>
+        </div>
+        <div class="msb-chips">
+          {% for item in converted_summary %}
+            <span class="msb-chip" title="{{ item.name }} ({{ item.native }})">
+              <strong>{{ item.native }}:</strong> {{ item.word }}
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
     {# ---------- timeline trend line and area graph ---------- #}
     <section class="pulse" aria-labelledby="pulse-title">
       <div class="pulse-header">
@@ -175,6 +191,9 @@
                   <div class="meta">
                     {% if is_sandrp %}
                       <span class="chip priority-chip" title="Priority Watchdog Source: South Asia Network on Dams, Rivers and People (https://sandrp.in/)">⭐ Priority Source</span>
+                    {% endif %}
+                    {% if a.match_pct %}
+                      <span class="chip match-chip" title="Matched '{{ a.matched_term }}' with {{ a.match_pct }}% similarity">🎯 {{ a.match_pct }}% match</span>
                     {% endif %}
                     <span class="src">{{ a.source or 'Unknown source' }}</span>
                     <time datetime="{{ a.published_at }}">{{ a.published_at|ist_date }}, {{ a.published_at|ago }}</time>

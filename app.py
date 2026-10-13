@@ -177,8 +177,14 @@ def build_where(f, view, skip=()):
     if f["kind"] and "kind" not in skip:
         where.append("kind = ?"); params.append(f["kind"])
     if f["q"]:
-        where.append("(title LIKE ? OR snippet LIKE ? OR dam_name LIKE ?)")
-        params += [f"%{f['q']}%"] * 3
+        import multilingual_search
+        conv = multilingual_search.convert_name_to_all_languages(f["q"])
+        toks = multilingual_search.get_all_search_tokens(conv)[:20]
+        sub = []
+        for t in toks:
+            sub.append("(title LIKE ? OR snippet LIKE ? OR dam_name LIKE ?)")
+            params.extend([f"%{t}%", f"%{t}%", f"%{t}%"])
+        where.append(f"({' OR '.join(sub)})")
     return " AND ".join(where), params
 
 
@@ -482,54 +488,88 @@ def search_name():
 
     conn = db.connect()
     deep_stats = None
+    converted_summary = []
 
     if name:
-        base_name, _ = deep_search.clean_search_name(name)
+        import multilingual_search
+        base_name, clean_name = deep_search.clean_search_name(name)
+
+        # 1. Convert English name into all 12 supported Indian language scripts
+        converted = multilingual_search.convert_name_to_all_languages(name)
+        search_tokens = multilingual_search.get_all_search_tokens(converted)
+
+        # Build human-friendly converted summary for UI display
+        for c_code, c_vars in converted.items():
+            if c_code == "en" or not c_vars:
+                continue
+            cfg = config.LANGUAGES.get(c_code, {})
+            converted_summary.append({
+                "code": c_code,
+                "name": cfg.get("name", c_code),
+                "native": cfg.get("native", c_code),
+                "word": c_vars[0]
+            })
 
         # Trigger deep internet search across newspapers if deep=1
         if deep == "1":
             deep_stats = deep_search.run_deep_search(conn, name)
 
-        # Search across title, snippet, dam_name, state, district
-        # Matches either the full name or the base name
-        like_full = f"%{name}%"
-        like_base = f"%{base_name}%"
-        clauses = ["(title LIKE ? OR snippet LIKE ? OR dam_name LIKE ? OR state LIKE ? OR district LIKE ? "
-                   "OR title LIKE ? OR snippet LIKE ? OR dam_name LIKE ?)"]
-        params = [like_full, like_full, like_full, like_full, like_full,
-                  like_base, like_base, like_base]
-        clauses.append("status IN ('relevant','maybe')")
+        # 2. Retrieve candidate articles from SQLite using English + all converted language terms
+        sub_clauses = ["(title LIKE ? OR snippet LIKE ? OR dam_name LIKE ?)"] * len(search_tokens[:30])
+        params = []
+        for tok in search_tokens[:30]:
+            params.extend([f"%{tok}%", f"%{tok}%", f"%{tok}%"])
+
+        # Also match state/district if base_name is a place
+        sub_clauses.append("(state LIKE ? OR district LIKE ?)")
+        params.extend([f"%{base_name}%", f"%{base_name}%"])
+
+        where_candidates = f"({' OR '.join(sub_clauses)}) AND status IN ('relevant','maybe')"
+        candidates = conn.execute(
+            f"SELECT * FROM articles WHERE {where_candidates} ORDER BY published_at DESC", params
+        ).fetchall()
+
+        # 3. Apply >= 75% match threshold after conversion
+        matched_articles = []
+        for r in candidates:
+            r_dict = dict(r)
+            text_to_match = f"{r_dict.get('title', '')} {r_dict.get('snippet', '')}"
+            score, is_match, matched_term = multilingual_search.calculate_75_match(converted, text_to_match)
+            if is_match:
+                r_dict["match_pct"] = round(score)
+                r_dict["matched_term"] = matched_term
+                matched_articles.append(r_dict)
+
+        # Apply sidebar facet filters (lang, state, kind)
+        filtered = matched_articles
         if lang:
-            clauses.append("language = ?"); params.append(lang)
+            filtered = [a for a in filtered if a.get("language") == lang]
         if state:
-            clauses.append("state = ?"); params.append(state)
+            filtered = [a for a in filtered if a.get("state") == state]
         if kind:
-            clauses.append("kind = ?"); params.append(kind)
-        where = " AND ".join(clauses)
+            filtered = [a for a in filtered if a.get("kind") == kind]
 
-        total = conn.execute(f"SELECT COUNT(*) FROM articles WHERE {where}", params).fetchone()[0]
-        rows = conn.execute(
-            f"SELECT * FROM articles WHERE {where} ORDER BY published_at DESC LIMIT ? OFFSET ?",
-            params + [PAGE_SIZE, (page - 1) * PAGE_SIZE]).fetchall()
+        total = len(filtered)
+        rows = filtered[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
 
-        # Sidebar facets — use base query (name + status only, no lang/state/kind filters)
-        base_where = ("(title LIKE ? OR snippet LIKE ? OR dam_name LIKE ? OR state LIKE ? OR district LIKE ? "
-                      "OR title LIKE ? OR snippet LIKE ? OR dam_name LIKE ?) "
-                      "AND status IN ('relevant','maybe')")
-        bp = [like_full, like_full, like_full, like_full, like_full,
-              like_base, like_base, like_base]
+        # Facets: computed from all matched_articles (before facet filtering)
+        lang_counts = {}
+        state_counts = {}
+        kinds = {"article": 0, "video": 0}
+        for a in matched_articles:
+            l = a.get("language", "und")
+            lang_counts[l] = lang_counts.get(l, 0) + 1
+            st = a.get("state", "")
+            if st:
+                state_counts[st] = state_counts.get(st, 0) + 1
+            k = a.get("kind", "article")
+            kinds[k] = kinds.get(k, 0) + 1
 
-        langs = conn.execute(f"SELECT language, COUNT(*) AS c FROM articles WHERE {base_where} "
-                             "GROUP BY language ORDER BY c DESC", bp).fetchall()
-        states = conn.execute(f"SELECT state, COUNT(*) AS c FROM articles WHERE {base_where} AND state != '' "
-                              "GROUP BY state ORDER BY state", bp).fetchall()
-        kinds_rows = conn.execute(
-            f"SELECT kind, COUNT(*) AS c FROM articles WHERE {base_where} GROUP BY kind", bp).fetchall()
-        kinds = {r["kind"]: r["c"] for r in kinds_rows}
+        langs = [{"language": l, "c": c} for l, c in sorted(lang_counts.items(), key=lambda x: x[1], reverse=True)]
+        states = [{"state": s, "c": c} for s, c in sorted(state_counts.items(), key=lambda x: x[0])]
 
         # Histogram by date
-        dates = [r[0] for r in conn.execute(
-            f"SELECT published_at FROM articles WHERE {where}", params)]
+        dates = [a["published_at"] for a in filtered if a.get("published_at")]
         if dates:
             all_dt = [datetime.strptime(d, DATE_FMT).replace(tzinfo=UTC).astimezone(IST).date() for d in dates]
             d_start, d_end = min(all_dt), max(all_dt)
@@ -568,7 +608,8 @@ def search_name():
         pages=max(1, math.ceil(total / PAGE_SIZE)),
         page=page, lang=lang, state_filter=state, kind=kind,
         view_start=d_start, view_end=d_end, unit=unit,
-        view_phrase=view_phrase, deep=deep, deep_stats=deep_stats)
+        view_phrase=view_phrase, deep=deep, deep_stats=deep_stats,
+        converted_summary=converted_summary)
 
 
 @app.get("/job")
