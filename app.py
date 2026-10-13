@@ -674,7 +674,7 @@ def nrsd_district_dams():
                 SELECT id, sr_no, pic, name, state, district, river, river_basin,
                        type_of_dam, height_m, length_m, gross_storage_mcm,
                        effective_storage_mcm, spillway_capacity_cumec,
-                       year_commission, dam_owner, purpose
+                       year_commission, dam_owner, purpose, par
                 FROM nrsd_dams
                 WHERE district LIKE ? AND state LIKE ?
                 ORDER BY name ASC
@@ -685,7 +685,7 @@ def nrsd_district_dams():
                 SELECT id, sr_no, pic, name, state, district, river, river_basin,
                        type_of_dam, height_m, length_m, gross_storage_mcm,
                        effective_storage_mcm, spillway_capacity_cumec,
-                       year_commission, dam_owner, purpose
+                       year_commission, dam_owner, purpose, par
                 FROM nrsd_dams
                 WHERE district LIKE ?
                 ORDER BY name ASC

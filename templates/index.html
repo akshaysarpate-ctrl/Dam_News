@@ -377,33 +377,6 @@
   </div>
 </div>
 
-<!-- NRSD Dam Salient Features Modal Popup -->
-<div id="nrsd-modal-backdrop" class="nrsd-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nrsd-modal-title">
-  <div class="nrsd-modal">
-    <div class="nrsd-modal-header">
-      <div>
-        <h2 id="nrsd-modal-title" class="nrsd-modal-title">Dam Name</h2>
-        <div class="nrsd-modal-badges">
-          <span id="nrsd-modal-pic" class="nrsd-modal-badge">PIC</span>
-          <span id="nrsd-modal-state" class="nrsd-modal-badge">State</span>
-          <span id="nrsd-modal-district" class="nrsd-modal-badge">District</span>
-        </div>
-      </div>
-      <button type="button" id="nrsd-modal-close-btn" class="nrsd-modal-close" aria-label="Close modal">✕</button>
-    </div>
-    <div id="nrsd-modal-body" class="nrsd-modal-body">
-      <!-- Injected via JavaScript -->
-    </div>
-    <div class="nrsd-modal-footer">
-      <div class="nrsd-footer-actions">
-        <a id="nrsd-modal-search-link" href="#" class="nrsd-btn-search">🔍 Search Dam Failure News</a>
-        <button type="button" id="nrsd-modal-copy-btn" class="nrsd-btn-copy">📋 Copy Salient Features</button>
-      </div>
-      <button type="button" id="nrsd-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
-    </div>
-  </div>
-</div>
-
 <!-- NRSD District Dams List Modal Popup -->
 <div id="nrsd-district-modal-backdrop" class="nrsd-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="district-modal-title">
   <div class="nrsd-modal district-modal-dialog">
@@ -436,6 +409,37 @@
         <span>National Register of Large Dams (NRSD) • Column 12 (District)</span>
       </div>
       <button type="button" id="district-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- NRSD Dam Salient Features Modal Popup (Layered on top of District Modal) -->
+<div id="nrsd-modal-backdrop" class="nrsd-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="nrsd-modal-title">
+  <div class="nrsd-modal">
+    <div class="nrsd-modal-header">
+      <div>
+        <h2 id="nrsd-modal-title" class="nrsd-modal-title">Dam Name</h2>
+        <div class="nrsd-modal-badges">
+          <span id="nrsd-modal-pic" class="nrsd-modal-badge">PIC</span>
+          <span id="nrsd-modal-state" class="nrsd-modal-badge">State</span>
+          <span id="nrsd-modal-district" class="nrsd-modal-badge">District</span>
+          <span id="nrsd-modal-par" class="nrsd-modal-badge par-badge" style="display:none;" title="Population At Risk (NRSD Col 20)">PAR: —</span>
+        </div>
+      </div>
+      <div class="nrsd-modal-header-actions">
+        <button type="button" id="nrsd-modal-back-btn" class="nrsd-modal-back-btn" style="display:none;" title="Back to District Dams List">← Back to District</button>
+        <button type="button" id="nrsd-modal-close-btn" class="nrsd-modal-close" aria-label="Close modal">✕</button>
+      </div>
+    </div>
+    <div id="nrsd-modal-body" class="nrsd-modal-body">
+      <!-- Injected via JavaScript -->
+    </div>
+    <div class="nrsd-modal-footer">
+      <div class="nrsd-footer-actions">
+        <a id="nrsd-modal-search-link" href="#" class="nrsd-btn-search">🔍 Search Dam Failure News</a>
+        <button type="button" id="nrsd-modal-copy-btn" class="nrsd-btn-copy">📋 Copy Salient Features</button>
+      </div>
+      <button type="button" id="nrsd-modal-dismiss-btn" class="nrsd-btn-dismiss">Close</button>
     </div>
   </div>
 </div>
@@ -1007,6 +1011,9 @@
         if (d.gross_storage_mcm) html += '    <span><strong class="district-spec-k">Storage:</strong> ' + esc(d.gross_storage_mcm) + ' MCM</span>';
         if (d.year_commission) html += '    <span><strong class="district-spec-k">Year:</strong> ' + esc(d.year_commission) + '</span>';
         if (d.dam_owner) html += '    <span><strong class="district-spec-k">Owner:</strong> ' + esc(d.dam_owner) + '</span>';
+        if (d.par !== undefined && d.par !== null && d.par !== '') {
+          html += '    <span><strong class="district-spec-k">PAR:</strong> <span style="font-weight:700;color:var(--water-deep);">' + esc(d.par) + '</span></span>';
+        }
         html += '  </div>';
         html += '  <div class="district-dam-card-actions">';
         html += '    <button type="button" class="btn-dam-salient" data-id="' + d.id + '">🏛️ Salient Features</button>';
@@ -1016,7 +1023,15 @@
       });
       distModalBody.innerHTML = html;
 
-      // Wire salient features button clicks
+      // Wire card click and salient features button clicks
+      distModalBody.querySelectorAll('.district-dam-card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+          if (e.target.closest('.btn-dam-news')) return;
+          var damId = this.dataset.damId;
+          if (damId) openDamModal(damId);
+        });
+      });
+
       distModalBody.querySelectorAll('.btn-dam-salient').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
           e.stopPropagation();
@@ -1063,6 +1078,7 @@
           if (d.height_m) details.push('Height: ' + d.height_m + 'm');
           if (d.gross_storage_mcm) details.push('Storage: ' + d.gross_storage_mcm + ' MCM');
           if (d.year_commission) details.push('Year: ' + d.year_commission);
+          if (d.par !== undefined && d.par !== null && d.par !== '') details.push('PAR: ' + d.par);
           lines.push((idx + 1) + '. ' + d.name + (details.length ? ' (' + details.join(', ') + ')' : ''));
         });
         var text = lines.join('\n');
@@ -1084,7 +1100,7 @@
 
     document.addEventListener('click', function(e) {
       if (!e.target) return;
-      if (e.target.id === 'nrsd-modal-close-btn' || e.target.id === 'nrsd-modal-dismiss-btn' || e.target.id === 'nrsd-modal-backdrop') {
+      if (e.target.id === 'nrsd-modal-close-btn' || e.target.id === 'nrsd-modal-dismiss-btn' || e.target.id === 'nrsd-modal-back-btn' || e.target.id === 'nrsd-modal-backdrop') {
         closeDamModal();
       }
       if (e.target.id === 'district-modal-close-btn' || e.target.id === 'district-modal-dismiss-btn' || e.target.id === 'nrsd-district-modal-backdrop') {
@@ -1107,6 +1123,27 @@
     // ==========================================
     function openDamModal(damId) {
       if (!modalBackdrop) return;
+      var backBtn = document.getElementById('nrsd-modal-back-btn');
+      var dismissBtn = document.getElementById('nrsd-modal-dismiss-btn');
+      var fromDistrict = distModalBackdrop && distModalBackdrop.classList.contains('open');
+
+      if (backBtn) {
+        if (fromDistrict) {
+          backBtn.textContent = '← Back to ' + (currentDistrictName || 'District');
+          backBtn.style.display = 'inline-flex';
+        } else {
+          backBtn.style.display = 'none';
+        }
+      }
+
+      if (dismissBtn) {
+        if (fromDistrict) {
+          dismissBtn.textContent = '← Back to District Dams';
+        } else {
+          dismissBtn.textContent = 'Close';
+        }
+      }
+
       fetch('/api/nrsd/dam/' + damId)
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1118,10 +1155,22 @@
           var picEl = document.getElementById('nrsd-modal-pic');
           var stateEl = document.getElementById('nrsd-modal-state');
           var distEl = document.getElementById('nrsd-modal-district');
+          var parEl = document.getElementById('nrsd-modal-par');
+
           if (titleEl) titleEl.textContent = data.name || 'Dam Salient Features';
           if (picEl) picEl.textContent = data.pic ? ('National Code (PIC): ' + data.pic) : 'PIC: N/A';
           if (stateEl) stateEl.textContent = data.state || 'India';
           if (distEl) distEl.textContent = data.district ? ('District: ' + data.district) : '';
+
+          if (parEl) {
+            if (data.par !== undefined && data.par !== null && data.par !== '') {
+              parEl.textContent = 'PAR: ' + data.par;
+              parEl.title = 'Population at Risk (NRSD Col 20): ' + data.par;
+              parEl.style.display = 'inline-block';
+            } else {
+              parEl.style.display = 'none';
+            }
+          }
 
           var mapLinkHtml = '';
           if (data.lat_dec && data.lng_dec) {
@@ -1144,6 +1193,8 @@
             searchLink.href = '/search-name?name=' + encodeURIComponent(data.name);
             searchLink.title = 'Search failure and distress news reports for ' + data.name;
           }
+
+          var parDisplay = (data.par !== undefined && data.par !== null && data.par !== '') ? esc(data.par) : '—';
 
           var body = document.getElementById('nrsd-modal-body');
           if (body) {
@@ -1181,12 +1232,13 @@
               '</div>' +
 
               '<div class="nrsd-card">' +
-              '  <h3 class="nrsd-card-heading">💧 Storage & Spillway Capacity</h3>' +
+              '  <h3 class="nrsd-card-heading">💧 Storage, Spillway & Risk</h3>' +
               '  <div class="nrsd-grid">' +
               '    <div class="nrsd-row"><span class="nrsd-k">Gross Storage Capacity</span><span class="nrsd-v">' + (data.gross_storage_mcm ? (esc(data.gross_storage_mcm) + ' MCM') : '—') + '</span></div>' +
               '    <div class="nrsd-row"><span class="nrsd-k">Effective Storage Capacity</span><span class="nrsd-v">' + (data.effective_storage_mcm ? (esc(data.effective_storage_mcm) + ' MCM') : '—') + '</span></div>' +
               '    <div class="nrsd-row"><span class="nrsd-k">Designed Spillway Capacity</span><span class="nrsd-v">' + (data.spillway_capacity_cumec ? (esc(data.spillway_capacity_cumec) + ' m³/s') : '—') + '</span></div>' +
               '    <div class="nrsd-row"><span class="nrsd-k">Primary Purpose</span><span class="nrsd-v">' + esc(data.purpose || '—') + '</span></div>' +
+              '    <div class="nrsd-row"><span class="nrsd-k">Population at Risk (PAR)</span><span class="nrsd-v" style="font-weight:700;color:var(--water-deep);">' + parDisplay + '</span></div>' +
               '  </div>' +
               '</div>';
           }
@@ -1215,6 +1267,7 @@
                    'Gross Storage: ' + (d.gross_storage_mcm || '') + ' MCM, Effective: ' + (d.effective_storage_mcm || '') + ' MCM\n' +
                    'Spillway Capacity: ' + (d.spillway_capacity_cumec || '') + ' m3/s\n' +
                    'Purpose: ' + (d.purpose || '') + '\n' +
+                   'Population at Risk (PAR): ' + (d.par !== undefined && d.par !== null && d.par !== '' ? d.par : '—') + '\n' +
                    'Coordinates: ' + (d.lat_long || '') + (d.lat_dec && d.lng_dec ? (' (' + d.lat_dec + ', ' + d.lng_dec + ')') : '') + '\n' +
                    'Google Maps: https://www.google.com/maps?q=' + (d.lat_dec || '') + ',' + (d.lng_dec || '');
         if (navigator.clipboard) {

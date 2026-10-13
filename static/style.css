@@ -1496,6 +1496,16 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   opacity: 1;
   pointer-events: auto;
 }
+
+/* Stacking Order: Salient Features Modal always sits in front of District Dialog */
+#nrsd-district-modal-backdrop {
+  z-index: 2000;
+}
+#nrsd-modal-backdrop {
+  z-index: 2200;
+  background: rgba(4, 30, 38, 0.65);
+}
+
 .nrsd-modal {
   background: var(--surface);
   border-radius: 12px;
@@ -1521,6 +1531,30 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   background: linear-gradient(135deg, var(--water-deep), var(--water));
   color: #fff;
 }
+.nrsd-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.nrsd-modal-back-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background .15s, transform .1s;
+}
+.nrsd-modal-back-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateX(-2px);
+}
 .nrsd-modal-title {
   margin: 0;
   font-size: 22px;
@@ -1542,6 +1576,12 @@ code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--lin
   border-radius: 99px;
   font-size: 12px;
   font-weight: 500;
+}
+.nrsd-modal-badge.par-badge {
+  background: rgba(254, 240, 138, 0.28);
+  color: #fef08a;
+  border: 1px solid rgba(254, 240, 138, 0.45);
+  font-weight: 600;
 }
 .nrsd-modal-close {
   background: rgba(255,255,255,.15);

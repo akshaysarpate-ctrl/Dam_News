@@ -84,13 +84,19 @@ def run():
             gross_storage_mcm TEXT,
             effective_storage_mcm TEXT,
             spillway_capacity_cumec TEXT,
-            purpose TEXT
+            purpose TEXT,
+            par TEXT
         )
     """)
     conn.execute("CREATE INDEX idx_nrsd_name ON nrsd_dams(name COLLATE NOCASE)")
     conn.execute("CREATE INDEX idx_nrsd_pic ON nrsd_dams(pic)")
     conn.execute("CREATE INDEX idx_nrsd_state ON nrsd_dams(state COLLATE NOCASE)")
     conn.execute("CREATE INDEX idx_nrsd_district ON nrsd_dams(district COLLATE NOCASE)")
+
+    # Identify PAR column in sheet
+    par_col = next((c for c in df.columns if "PAR" in str(c).upper()), None)
+    if par_col:
+        print(f"Detected PAR column: {repr(par_col)}")
 
     rows = []
     for _, r in df.iterrows():
@@ -99,6 +105,8 @@ def run():
             continue
         raw_coords = clean_val(r.get("Latitude/ Longitude(7)", ""))
         lat_dec, lng_dec, formatted_coords = parse_coordinates(raw_coords)
+        raw_par = clean_val(r.get(par_col, "")) if par_col else ""
+        par_val = str(raw_par) if raw_par != "" else ""
 
         rows.append((
             clean_val(r.get("Sr.No. (1)", "")),
@@ -122,6 +130,7 @@ def run():
             clean_val(r.get("Effective Storage Capacity(MCM) (17)", "")),
             clean_val(r.get("Designed Spillway Capacity(m3/s) (18)", "")),
             clean_val(r.get("Purpose (19)", "")),
+            par_val,
         ))
 
     conn.executemany("""
@@ -129,8 +138,8 @@ def run():
             sr_no, pic, name, sdso_name, state, dam_owner, lat_long,
             lat_dec, lng_dec, year_commission, type_of_dam, river_basin,
             river, district, seismic_zone, height_m, length_m,
-            gross_storage_mcm, effective_storage_mcm, spillway_capacity_cumec, purpose
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            gross_storage_mcm, effective_storage_mcm, spillway_capacity_cumec, purpose, par
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, rows)
 
     conn.commit()
