@@ -37,10 +37,25 @@ def parse_feed(content: bytes, lang: str, query: str) -> list[dict]:
         if snippet.startswith(title) or snippet == source:
             snippet = ""
         published = datetime(*parsed[:6], tzinfo=timezone.utc)
+        link = entry.link
+        link_lower = link.lower()
+        source_lower = source.lower()
+        is_video = (
+            "youtube.com" in link_lower
+            or "youtu.be" in link_lower
+            or "youtube" in source_lower
+            or "site:youtube.com" in (query or "").lower()
+        )
         items.append({
-            "kind": "article", "title": title, "url": entry.link, "source": source,
-            "language": lang, "published_at": db.utc_iso(published), "snippet": snippet,
-            "collector": "gnews", "query": query,
+            "kind": "video" if is_video else "article",
+            "title": title,
+            "url": link,
+            "source": source or ("YouTube" if is_video else ""),
+            "language": lang,
+            "published_at": db.utc_iso(published),
+            "snippet": snippet,
+            "collector": "youtube" if is_video else "gnews",
+            "query": query,
         })
     return items
 

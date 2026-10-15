@@ -62,6 +62,12 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
+    # Ensure any YouTube URLs or sources are tagged as kind='video'
+    try:
+        conn.execute("UPDATE articles SET kind = 'video' WHERE (source LIKE '%youtube%' OR url LIKE '%youtube%' OR url LIKE '%youtu.be%') AND kind != 'video'")
+        conn.commit()
+    except Exception:
+        pass
     return conn
 
 
@@ -84,11 +90,37 @@ def _sha1(text: str) -> str:
     return hashlib.sha1(text.encode("utf-8")).hexdigest()
 
 
+import re
+
+def extract_youtube_id(url: str) -> str:
+    """Extract 11-char YouTube video ID from watch, embed, short, or youtu.be URLs."""
+    if not url:
+        return ""
+    m = re.search(r"(?:v=|\/embed\/|\/watch\?v=|\/v\/|youtu\.be\/|\/shorts\/)([a-zA-Z0-9_-]{11})", url)
+    return m.group(1) if m else ""
+
+
 def insert_article(conn: sqlite3.Connection, a: dict) -> bool:
     """Insert one article. Returns True if it was new."""
     url = a["url"]
     if not url.lower().startswith(("http://", "https://")):
         return False
+
+    yt_id = extract_youtube_id(url)
+    kind = a.get("kind", "article")
+    source = a.get("source", "")
+    url_lower = url.lower()
+    source_lower = source.lower()
+
+    if yt_id or "youtube.com" in url_lower or "youtu.be" in url_lower or "youtube" in source_lower:
+        kind = "video"
+        if not source:
+            source = "YouTube"
+
+    thumbnail = a.get("thumbnail", "")
+    if kind == "video" and not thumbnail and yt_id:
+        thumbnail = f"https://i.ytimg.com/vi/{yt_id}/hqdefault.jpg"
+
     cur = conn.execute(
         """INSERT OR IGNORE INTO articles
            (url_hash, dedupe_key, kind, title, url, source, language, published_at,
@@ -96,10 +128,10 @@ def insert_article(conn: sqlite3.Connection, a: dict) -> bool:
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             _sha1(canonical_url(url)),
-            _sha1((a.get("source", "").lower()) + "|" + norm_title(a["title"])),
-            a.get("kind", "article"), a["title"], url, a.get("source", ""),
+            _sha1((source.lower()) + "|" + norm_title(a["title"])),
+            kind, a["title"], url, source,
             a.get("language", "und"), a["published_at"], a.get("snippet", ""),
-            a.get("thumbnail", ""), a.get("state", ""), a.get("district", ""),
+            thumbnail, a.get("state", ""), a.get("district", ""),
             a.get("dam_name", ""), a.get("score", 0),
             a.get("status", "maybe"), a.get("collector", ""), a.get("query", ""),
             now_iso(),

@@ -429,7 +429,7 @@ def index():
         last_updated_human=last_updated_human,
         last_updated_exact=last_updated_exact,
         notice=f["error"] or NOTICES.get(request.args.get("notice", ""), ""),
-        job=job, is_my_search=is_my_search, today=today().isoformat(), has_youtube=bool(config.YOUTUBE_API_KEY),
+        job=job, is_my_search=is_my_search, today=today().isoformat(), has_youtube=True,
         all_langs=[{"code": c, "name": v["name"], "native": v["native"]}
                    for c, v in config.LANGUAGES.items()])
 
@@ -445,7 +445,7 @@ def search_web():
     langs = [c for c in request.form.getlist("search_langs") if c in config.LANGUAGES]
     if not langs:
         return redirect(url_for("index", start=start.isoformat(), end=end.isoformat(), notice="nolangs"))
-    sources = ["sandrp", "gnews", "gdelt"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
+    sources = ["sandrp", "gnews", "gdelt", "youtube"]
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}
@@ -458,11 +458,11 @@ def search_web():
 
 @app.route("/refresh", methods=["GET", "POST"])
 def refresh():
-    """One-click refresh: fast search of the last 3 days across all Indian languages via Google News and SANDRP."""
+    """One-click refresh: fast search of the last 3 days across all Indian languages via Google News, SANDRP and YouTube."""
     end = today()
     start = end - timedelta(days=2)
     langs = list(config.LANGUAGES)
-    sources = ["sandrp", "gnews"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
+    sources = ["sandrp", "gnews", "youtube"]
     started = jobs.start(start, end, langs, sources,
                          workers=WEB_SEARCH_WORKERS, window_days=WEB_WINDOW_DAYS)
     args = {"start": start.isoformat(), "end": end.isoformat()}

@@ -337,7 +337,7 @@
                 <div class="card-actions">
                   <a class="btn-read-link"
                      href="{{ a.url }}"
-                     target="_blank" rel="noopener noreferrer">Read full story ↗</a>
+                     target="_blank" rel="noopener noreferrer">{% if a.kind == 'video' %}▶ Watch video{% else %}Read full story ↗{% endif %}</a>
                   <button type="button" class="btn-copy-link"
                      onclick="copyLink('{{ a.url }}', this)"
                      title="Copy article URL">📋 Copy link</button>

@@ -45,6 +45,13 @@ def store(conn, items, stats):
         stats["seen"] += 1
         verdict = filters.evaluate(item["language"], item["title"], item.get("snippet", ""), item.get("source", ""), item.get("url", ""))
         if not verdict:
+            for other_lang in ("mr", "hi", "gu", "te", "ta", "bn", "kn", "ml", "or", "pa"):
+                v = filters.evaluate(other_lang, item["title"], item.get("snippet", ""), item.get("source", ""), item.get("url", ""))
+                if v:
+                    verdict = v
+                    item["language"] = other_lang
+                    break
+        if not verdict:
             continue
         item["score"], item["status"], item["state"] = verdict
         valid.append(item)
@@ -79,15 +86,18 @@ def collect_range(conn, start: date, end: date, langs=None,
                     tasks.append(("gnews", partial(google_news.fetch, code, cfg, query, after, before)))
 
     if "youtube" in sources:
-        if not config.YOUTUBE_API_KEY:
-            stats["notes"].append("YouTube was skipped because no YOUTUBE_API_KEY is set in .env.")
-        else:
+        if config.YOUTUBE_API_KEY:
             t0 = datetime.combine(start, time.min, tzinfo=db.IST)
             t1 = datetime.combine(end + timedelta(days=1), time.min, tzinfo=db.IST)
             for code in langs:
                 for query in config.LANGUAGES[code]["queries"][:config.YOUTUBE_QUERIES_PER_LANGUAGE]:
                     tasks.append(("youtube", partial(youtube.fetch, config.YOUTUBE_API_KEY,
                                                      code, query, t0, t1)))
+        # Always ingest YouTube video news reports via Google News RSS queries targeting YouTube
+        for code in langs:
+            cfg = config.LANGUAGES[code]
+            for query in cfg["queries"][:2]:
+                tasks.append(("youtube", partial(google_news.fetch, code, cfg, f"{query} site:youtube.com", after=start, before=end)))
 
     gdelt_queries, gdelt_start = [], start
     if "gdelt" in sources:

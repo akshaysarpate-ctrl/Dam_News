@@ -47,6 +47,8 @@ _FOREIGN_COUNTRY_RE = re.compile(r"\b(" + "|".join(re.escape(t) for t in FOREIGN
 
 INDIAN_CITIES = [
     "mumbai", "pune", "nagpur", "nashik", "aurangabad", "kolhapur", "solapur", "thane",
+    "gondia", "tiroda", "tirora", "bhandara", "gadchiroli", "chandrapur", "amravati", "yavatmal", "wardha",
+    "गोंदिया", "तिरोडा", "तिरोरा", "भंडारा", "गडचिरोली", "चंद्रपूर",
     "ahmedabad", "surat", "vadodara", "rajkot", "bhavnagar", "jamnagar", "junagadh", "gandhinagar", "morbi", "kutch",
     "jaipur", "jodhpur", "kota", "bikaner", "ajmer", "udaipur", "bhilwara", "alwar", "sikar",
     "bhopal", "indore", "gwalior", "jabalpur", "ujjain", "sagar", "dewas", "satna", "rewa",
@@ -256,14 +258,34 @@ def _matchers(lang: str):
 _NEGATIVE = _compile(config.NEGATIVE_TERMS)
 
 
+DISTRICT_TO_STATE = {
+    "gondia": "Maharashtra", "गोंदिया": "Maharashtra",
+    "tiroda": "Maharashtra", "तिरोडा": "Maharashtra",
+    "tirora": "Maharashtra", "तिरोरा": "Maharashtra",
+    "bhandara": "Maharashtra", "भंडारा": "Maharashtra",
+    "chandrapur": "Maharashtra", "चंद्रपूर": "Maharashtra",
+    "nagpur": "Maharashtra", "नागपूर": "Maharashtra",
+    "pune": "Maharashtra", "पुणे": "Maharashtra",
+    "nashik": "Maharashtra", "नासिक": "Maharashtra",
+    "solapur": "Maharashtra", "सोलापूर": "Maharashtra",
+    "kolhapur": "Maharashtra", "कोल्हापूर": "Maharashtra",
+}
+_DISTRICT_RE = re.compile(r"\b(" + "|".join(re.escape(k) for k in DISTRICT_TO_STATE) + r")\b", re.IGNORECASE)
+
+
 def detect_state(text: str) -> str:
-    m = _STATE_RE.search(nfkc(text))
-    if not m:
-        return ""
-    found = m.group(1)
-    if found in _STATE_ALIASES:
-        return _STATE_ALIASES[found]
-    return next(s for s in INDIAN_STATES if s.lower() == found)
+    norm = nfkc(text)
+    m = _STATE_RE.search(norm)
+    if m:
+        found = m.group(1)
+        if found in _STATE_ALIASES:
+            return _STATE_ALIASES[found]
+        return next(s for s in INDIAN_STATES if s.lower() == found)
+    # Check district
+    dm = _DISTRICT_RE.search(norm)
+    if dm:
+        return DISTRICT_TO_STATE.get(dm.group(1).lower(), "")
+    return ""
 
 
 def evaluate(lang: str, title: str, snippet: str = "", source: str = "", url: str = ""):

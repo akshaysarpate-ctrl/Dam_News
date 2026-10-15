@@ -127,6 +127,26 @@ def build_deep_newspaper_queries(raw_name: str) -> list[tuple[str, dict, str]]:
     if gu_cfg:
         tasks.append(("gu", gu_cfg, f'"{gu_name}" ડેમ'))
 
+    # 4. YouTube video queries via Google News RSS across Indian languages & English
+    if en_cfg:
+        tasks.append(("en", en_cfg, f'"{base_name}" site:youtube.com'))
+        if not is_generic:
+            tasks.append(("en", en_cfg, f'"{base_name}" dam site:youtube.com'))
+    if mr_cfg:
+        tasks.append(("mr", mr_cfg, f'"{mr_name}" site:youtube.com'))
+        tasks.append(("mr", mr_cfg, f'"{mr_name}" धरण site:youtube.com'))
+    if hi_cfg:
+        tasks.append(("hi", hi_cfg, f'"{hi_name}" site:youtube.com'))
+        tasks.append(("hi", hi_cfg, f'"{hi_name}" बांध site:youtube.com'))
+    if te_cfg:
+        tasks.append(("te", te_cfg, f'"{te_name}" site:youtube.com'))
+    if ta_cfg:
+        tasks.append(("ta", ta_cfg, f'"{ta_name}" site:youtube.com'))
+    if gu_cfg:
+        tasks.append(("gu", gu_cfg, f'"{gu_name}" site:youtube.com'))
+    if bn_cfg := config.LANGUAGES.get("bn"):
+        tasks.append(("bn", bn_cfg, f'"{converted.get("bn", [base_name])[0]}" site:youtube.com'))
+
     return tasks
 
 
@@ -134,6 +154,8 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
     """Execute deep search across all newspapers on the internet and store in DB."""
     t0 = time.time()
     base_name, clean_name = clean_search_name(raw_name)
+    import multilingual_search
+    converted = multilingual_search.convert_name_to_all_languages(raw_name)
     queries = build_deep_newspaper_queries(raw_name)
 
     stats = {
@@ -172,7 +194,7 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
     except Exception as e:
         log.warning("SANDRP direct fetch failed for %r: %s", base_name, e)
 
-    # Priority 2: Concurrent multi-newspaper queries
+    # Priority 2: Concurrent multi-newspaper and YouTube queries
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futs = [pool.submit(fetch_one, t) for t in queries]
         for f in as_completed(futs):
@@ -180,6 +202,29 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
             stats["items_seen"] += len(items)
             for it in items:
                 all_fetched.append(it)
+
+    # Priority 3: Direct YouTube API search if key is configured
+    if config.YOUTUBE_API_KEY:
+        try:
+            from datetime import datetime, timedelta
+            from collectors import youtube
+            yt_since = datetime.now() - timedelta(days=365 * 3)
+            mr_name = converted.get("mr", [base_name])[0]
+            hi_name = converted.get("hi", [base_name])[0]
+            yt_tasks = [
+                ("en", f'"{base_name}" dam'),
+                ("mr", f'"{mr_name}" धरण' if mr_name else f'"{base_name}" dam'),
+                ("hi", f'"{hi_name}" बांध' if hi_name else f'"{base_name}" dam'),
+            ]
+            for yt_lang, yt_q in yt_tasks:
+                try:
+                    yt_res = youtube.fetch(config.YOUTUBE_API_KEY, yt_lang, yt_q, yt_since, max_results=25)
+                    stats["items_seen"] += len(yt_res)
+                    all_fetched.extend(yt_res)
+                except Exception as yt_err:
+                    log.warning("YouTube API fetch failed for %r: %s", yt_q, yt_err)
+        except Exception as e:
+            log.warning("YouTube direct fetch error: %s", e)
 
     # Process and store results
     base_lower = base_name.lower()
@@ -190,9 +235,6 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
         "canal", "river", "gate", "breach", "collapse", "spillway", "overflow",
         "inundat", "submerg", "leak", "crack", "seepage", "alert", "disaster"
     )
-
-    import multilingual_search
-    converted = multilingual_search.convert_name_to_all_languages(raw_name)
 
     valid_items = []
     for item in all_fetched:
@@ -206,10 +248,30 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
         if filters._AI_SYNTHETIC_RE.search(text) or (item.get("source") and filters._AI_SOURCE_RE.search(item["source"])) or filters._NON_DAM_METAPHOR_RE.search(text):
             continue
 
+        # Tag video kind and thumbnail if YouTube item
+        u_low = url.lower()
+        s_low = source.lower()
+        yt_id = db.extract_youtube_id(url)
+        if yt_id or "youtube.com" in u_low or "youtu.be" in u_low or "youtube" in s_low or item.get("kind") == "video":
+            item["kind"] = "video"
+            if not item.get("source"):
+                item["source"] = "YouTube"
+            if yt_id and not item.get("thumbnail"):
+                item["thumbnail"] = f"https://i.ytimg.com/vi/{yt_id}/hqdefault.jpg"
+
         # Check if the text matches converted name by at least 75%
         score_pct, is_75_match, matched_term = multilingual_search.calculate_75_match(converted, f"{title} {snippet}")
 
+        # Multi-language fallback for evaluation: if evaluation fails under query language,
+        # test regional languages (e.g. Marathi/Hindi field reports on YouTube)
         verdict = filters.evaluate(item["language"], title, snippet, source, url)
+        if not verdict:
+            for other_lang in ("mr", "hi", "gu", "te", "ta", "bn", "kn", "ml", "or", "pa"):
+                v = filters.evaluate(other_lang, title, snippet, source, url)
+                if v:
+                    verdict = v
+                    item["language"] = other_lang
+                    break
 
         if is_75_match:
             state = filters.detect_state(f"{title} {snippet}")
@@ -256,6 +318,17 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
         except Exception as exc:
             log.warning("Pre-insert URL decode error: %s", exc)
 
+    # Re-check YouTube kind and thumbnail after URL decoding
+    for it in valid_items:
+        u = it.get("url", "")
+        yt_id = db.extract_youtube_id(u)
+        if yt_id or "youtube.com" in u.lower() or "youtu.be" in u.lower() or it.get("source", "").lower() == "youtube":
+            it["kind"] = "video"
+            if not it.get("source"):
+                it["source"] = "YouTube"
+            if yt_id and not it.get("thumbnail"):
+                it["thumbnail"] = f"https://i.ytimg.com/vi/{yt_id}/hqdefault.jpg"
+
     for item in valid_items:
         if db.insert_article(conn, item):
             stats["items_added"] += 1
@@ -278,10 +351,18 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
                 if rows:
                     urls = [r["url"] for r in rows]
                     decoded = util.batch_decode_google_urls(urls)
-                    updates = [(d, r["id"]) for r, d in zip(rows, decoded) if d and "news.google.com" not in d]
-                    if updates:
-                        bg_conn.executemany("UPDATE articles SET url = ? WHERE id = ?", updates)
-                        bg_conn.commit()
+                    for r, d in zip(rows, decoded):
+                        if d and "news.google.com" not in d:
+                            yt_id = db.extract_youtube_id(d)
+                            if yt_id or "youtube.com" in d.lower() or "youtu.be" in d.lower():
+                                thumb = f"https://i.ytimg.com/vi/{yt_id}/hqdefault.jpg" if yt_id else ""
+                                bg_conn.execute(
+                                    "UPDATE articles SET url = ?, kind = 'video', thumbnail = COALESCE(NULLIF(thumbnail, ''), ?) WHERE id = ?",
+                                    (d, thumb, r["id"])
+                                )
+                            else:
+                                bg_conn.execute("UPDATE articles SET url = ? WHERE id = ?", (d, r["id"]))
+                    bg_conn.commit()
                 bg_conn.close()
             except Exception as exc:
                 log.warning("Background URL decode error: %s", exc)

@@ -80,7 +80,7 @@ def _scheduler_loop():
                 end = today_date
                 start = end - timedelta(days=2)
                 langs = list(config.LANGUAGES)
-                sources = ["gnews", "gdelt"] + (["youtube"] if config.YOUTUBE_API_KEY else [])
+                sources = ["sandrp", "gnews", "gdelt", "youtube"]
 
                 # Run search using existing jobs runner
                 started = jobs.start(start, end, langs, sources, workers=6, window_days=14)
