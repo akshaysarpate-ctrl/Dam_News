@@ -161,6 +161,65 @@ AI_SOURCE_PATTERNS = [
 ]
 _AI_SOURCE_RE = re.compile("|".join(AI_SOURCE_PATTERNS), re.IGNORECASE)
 
+# Figurative / Idiomatic non-dam phrases in all supported Indian languages & English
+# (e.g. "सब्र का बांध टूट गया", "धैर्याचा बांध फुटला", "ধৈর্যের বাঁধ ভেঙে গেল", "dam of patience broke")
+NON_DAM_METAPHOR_PATTERNS = [
+    # Hindi / Urdu / Hinglish
+    r"(?:सब्र|सबर|धैर्य)\s*(?:का|के|की|दा)?\s*(?:बाँध|बांध|पैमाना)",
+    r"(?:बाँध|बांध)\s*(?:का|के|की)?\s*(?:सब्र|सबर|धैर्य)",
+    r"(?:टूटा|टूट|फूटा|फूट)\s*(?:गया\s*)?(?:का\s*)?(?:सब्र|सबर|धैर्य)",
+    r"(?:सब्र|सबर|धैर्य)\s*(?:का\s*)?(?:टूटा|टूट|फूटा|फूट)",
+    # Bengali
+    r"ধৈর্য(?:ের)?\s*বাঁধ",
+    r"সবর(?:ের)?\s*বাঁধ",
+    r"ধৈর্য\s*ভাঙ",
+    # Assamese
+    r"ধৈৰ্য(?:ৰ|্যৰ)?\s*বান্ধ",
+    # Odia
+    r"ଧୈର୍ଯ୍ୟ(?:ର)?\s*ବନ୍ଧ",
+    r"ଧୈର୍ଯ୍ୟ\s*ଭାଙ୍ଗ",
+    # Marathi
+    r"धैर्याचा\s*बांध",
+    r"संयमाचा\s*बांध",
+    r"सबरचा\s*बांध",
+    r"धैर्य\s*(?:सुटले|फुटले|तुटले)",
+    # Gujarati
+    r"ધીરજ(?:નો|\s*નો)?\s*બંધ",
+    r"સબ્ર(?:નો|\s*નો)?\s*બંધ",
+    r"સબર(?:નો|\s*નો)?\s*બંધ",
+    r"સંયમ(?:નો|\s*નો)?\s*બંધ",
+    r"ધીરજ\s*(?:તૂટી|ખૂટી)",
+    # Punjabi
+    r"ਸਬਰ\s*ਦਾ\s*(?:ਬੰਨ੍ਹ|ਬੰਧ)",
+    r"ਧੀਰਜ\s*ਦਾ\s*(?:ਬੰਨ੍ਹ|ਬੰਧ)",
+    r"ਟੁੱਟਿਆ\s*ਸਬਰ",
+    r"ਸਬਰ\s*ਟੁੱਟ",
+    # Urdu
+    r"صبر\s*کا\s*(?:بندھ|بند|پیمانہ)",
+    r"صبر\s*ٹوٹ",
+    # South Indian languages
+    r"సహన(?:పు|ం)?\s*(?:ఆనకట్ట|కట్ట)",
+    r"సహనం\s*నశించి",
+    r"తాಳ್ಮೆಯ\s*(?:ಕಟ್ಟೆ|ಅಣೆಕಟ್ಟು)",
+    r"ತಾಳ್ಮೆ\s*ಗೆಟ್ಟ",
+    r"பொறுமை(?:யின்)?\s*அணை",
+    r"பொறுமை\s*இழந்த",
+    r"ക്ഷമയുടെ\s*അണക്കെട്ട്",
+    r"ക്ഷമ\s*നശിച്ചു",
+    # English & Latin transliterations
+    r"\bdam\s+of\s+patience\b",
+    r"\bdam\s+of\s+forbearance\b",
+    r"\bdam\s+of\s+tolerance\b",
+    r"\bpatience\s+dam\b",
+    r"\b(?:lost|broke|burst|broken)\s+(?:all\s+)?patience\b",
+    r"\bpatience\s+(?:broke|burst|ran\s+out)\b",
+    r"\bsabr\s*(?:ka|ke|ki)?\s*b[a|aa]+ndh\b",
+    r"\bsabar\s*(?:ka|ke|ki)?\s*b[a|aa]+ndh\b",
+    r"\bdhairya\s*(?:ka|ke|ki)?\s*b[a|aa]+ndh\b",
+    r"\bsabr\s*(?:ka\s*)?toot\b",
+]
+_NON_DAM_METAPHOR_RE = re.compile("|".join(NON_DAM_METAPHOR_PATTERNS), re.IGNORECASE)
+
 
 def nfkc(text: str) -> str:
     return unicodedata.normalize("NFKC", text or "").lower()
@@ -220,6 +279,10 @@ def evaluate(lang: str, title: str, snippet: str = "", source: str = "", url: st
 
     # 0. Reject AI-generated, synthetic, CGI, simulation, and cartoon content immediately
     if _AI_SYNTHETIC_RE.search(text) or (source and _AI_SOURCE_RE.search(source)):
+        return None
+
+    # 0b. Reject figurative / non-dam metaphors ("सब्र का बांध टूट गया", "dam of patience", etc.)
+    if _NON_DAM_METAPHOR_RE.search(text):
         return None
 
     # Check if this is from priority watchdog site SANDRP (https://sandrp.in/)

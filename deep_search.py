@@ -203,7 +203,7 @@ def run_deep_search(conn, raw_name: str, workers: int = 15) -> dict:
         text = f"{title} {snippet}".lower()
         is_sandrp_item = ("sandrp.in" in url.lower()) or ("sandrp" in source.lower())
 
-        if filters._AI_SYNTHETIC_RE.search(text) or (item.get("source") and filters._AI_SOURCE_RE.search(item["source"])):
+        if filters._AI_SYNTHETIC_RE.search(text) or (item.get("source") and filters._AI_SOURCE_RE.search(item["source"])) or filters._NON_DAM_METAPHOR_RE.search(text):
             continue
 
         # Check if the text matches converted name by at least 75%

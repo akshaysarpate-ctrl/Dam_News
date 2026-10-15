@@ -24,8 +24,9 @@ overtopping, serious leakage or cracks of a dam, barrage, reservoir or tank bund
 inundation of land/villages caused by such a failure or an uncontrolled release.
 relevant = false for: inaugurations, plans, tenders, mock drills, routine water-level or
 release notices, tourism, opinion pieces without an incident, failures of river
-flood embankments (use structure "river_embankment"), and any AI-generated videos,
-synthetic images, CGI simulations, cartoons, or hypothetical "what if" scenarios."""
+flood embankments (use structure "river_embankment"), any AI-generated videos,
+synthetic images, CGI simulations, cartoons, hypothetical "what if" scenarios,
+and figurative/metaphorical idioms like "dam of patience broke" (सब्र का बांध टूट गया, ধैর্যের বাঁধ, etc.) which are not physical dam structures."""
 
 
 def parse_reply(text: str):
